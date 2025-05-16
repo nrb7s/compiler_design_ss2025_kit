@@ -1,11 +1,11 @@
 section .text
-global main
+global _start
 
-main:
+_start:
 	push ebp
 	mov ebp, esp
 	mov eax, 2
-	mov ebx, 1
+	mov ebx, 5
 	mov ecx, eax
 	add ecx, ebx
 	mov eax, ecx

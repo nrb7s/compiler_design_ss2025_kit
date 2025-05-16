@@ -45,11 +45,7 @@ public class CodeGenerator {
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
             builder.append("section .text\n")
-                    .append("global ")
-                    .append(graph.name())
-                    .append("\n\n")
-                    .append(graph.name())
-                    .append(":\n");
+                    .append("global _start\n\n_start:\n");
 
             // Prologue, though not needed for simple compiling like this
             builder.append("\tpush ebp\n");
