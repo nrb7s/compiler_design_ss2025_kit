@@ -2,5 +2,5 @@
 	.globl main
 main:
 	movq $42, %rax
-	movq %rax, %eax
+	movq %rax, %rax
 	ret

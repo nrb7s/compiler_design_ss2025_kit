@@ -86,7 +86,7 @@ public class CodeGenerator {
                 Node res = predecessorSkipProj(r, ReturnNode.RESULT);
                 builder.append("\tmovq ")
                         .append(regAllocate(registers.get(res)))
-                        .append(", %eax\n");
+                        .append(", %rax\n");
             }
             case ConstIntNode c -> {
                 String dest = regAllocate(registers.get(c));
