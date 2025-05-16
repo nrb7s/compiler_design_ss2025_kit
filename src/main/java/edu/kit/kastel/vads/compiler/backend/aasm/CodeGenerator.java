@@ -44,7 +44,8 @@ public class CodeGenerator {
         for (IrGraph graph : program) {
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
-            builder.append("\t.text\n")
+            builder.append(".section .note.GNU-stack,\"\",@progbits\n")
+                    .append("\t.text\n")
                     .append("\t.globl ")
                     .append(graph.name())
                     .append("\n")
@@ -59,7 +60,7 @@ public class CodeGenerator {
 
             // Epilogue
             // builder.append("\tpopp %rbp\n");
-            builder.append("\tret");
+            builder.append("\tret\n");
         }
         return builder.toString();
     }

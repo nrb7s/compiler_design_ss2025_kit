@@ -1,3 +1,4 @@
+.section .note.GNU-stack,"",@progbits
 	.text
 	.globl main
 main:
