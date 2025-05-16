@@ -52,13 +52,13 @@ public class CodeGenerator {
                     .append(":\n");
 
             // Prologue, though not needed for simple compiling like this
-            builder.append("\tpushl %rbp\n");
-            builder.append("\tmovl %rsp, %rbp\n");
+            builder.append("\tpushl %ebp\n");
+            builder.append("\tmovl %esp, %ebp\n");
 
             generateAssemblyForGraph(graph, builder, registers);
 
             // Epilogue
-            builder.append("\tpopl %rbp\n");
+            builder.append("\tpopl %ebp\n");
             builder.append("\tret\n");
         }
         return builder.toString();
@@ -182,6 +182,7 @@ public class CodeGenerator {
     private static String regAllocate(Register r) {
         int id = ((VirtualRegister) r).id();
         return switch (id) {
+            /*
             case 0 -> "%r8d";
             case 1 -> "%r9d";
             case 2 -> "%r10d";
@@ -190,6 +191,13 @@ public class CodeGenerator {
             case 5 -> "%r13d";
             case 6 -> "%r14d";
             case 7 -> "%r15d";
+             */
+            case 0 -> "%eax";
+            case 1 -> "%ebx";
+            case 2 -> "%ecx";
+            case 3 -> "%edx";
+            case 4 -> "%esi";
+            case 5 -> "%edi";
             default -> throw new IllegalArgumentException("Too many registers: " + id);
         };
     }
