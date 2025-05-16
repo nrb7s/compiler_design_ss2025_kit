@@ -52,14 +52,14 @@ public class CodeGenerator {
                     .append(":\n");
 
             // Prologue, though not needed for simple compiling like this
-            builder.append("\tpushp %rbp\n");
-            builder.append("\tmovp %rsp, %rbp\n");
+            // builder.append("\tpushp %rbp\n");
+            // builder.append("\tmovp %rsp, %rbp\n");
 
             generateAssemblyForGraph(graph, builder, registers);
 
             // Epilogue
-            builder.append("\tpopp %rbp\n");
-            builder.append("\tret\n");
+            // builder.append("\tpopp %rbp\n");
+            builder.append("\tret");
         }
         return builder.toString();
     }
