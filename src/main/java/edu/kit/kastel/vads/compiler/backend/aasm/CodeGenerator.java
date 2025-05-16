@@ -140,6 +140,7 @@ public class CodeGenerator {
         String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
+        // if (divisor == 0)
         builder.append("\tcmp ").append(divisor).append(", 0\n");
         builder.append("\tje division_by_zero_error\n");
 
