@@ -136,8 +136,11 @@ public class CodeGenerator {
     }
 
     private static void divide(StringBuilder builder, Map<Node, Register> registers, Node node) {
-        String dividend = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)));
-        String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
+        Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
+        Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
+
+        String dividend = getOperand(leftNode, registers);
+        String divisor = getOperand(rightNode, registers);
         String dest = regAllocate(registers.get(node));
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
@@ -147,8 +150,11 @@ public class CodeGenerator {
     }
 
     private static void mod(StringBuilder builder, Map<Node, Register> registers, Node node) {
-        String dividend = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)));
-        String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
+        Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
+        Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
+
+        String dividend = getOperand(leftNode, registers);
+        String divisor = getOperand(rightNode, registers);
         String dest = regAllocate(registers.get(node));
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
