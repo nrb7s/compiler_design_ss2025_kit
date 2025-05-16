@@ -51,6 +51,7 @@ public class Main {
 
         // TODO: generate assembly and invoke gcc instead of generating abstract assembly
         // String s = new CodeGenerator().generateCode(graphs);
+        // for test run "./run.sh ./userTest/test.vads ./userTest/test.s" after built
         String s = new CodeGenerator().generateAssembly(graphs);
         Files.writeString(output, s);
     }

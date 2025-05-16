@@ -136,11 +136,8 @@ public class CodeGenerator {
     }
 
     private static void divide(StringBuilder builder, Map<Node, Register> registers, Node node) {
-        Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
-        Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
-
-        String dividend = getOperand(leftNode, registers);
-        String divisor = getOperand(rightNode, registers);
+        String dividend = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)));
+        String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
@@ -150,11 +147,8 @@ public class CodeGenerator {
     }
 
     private static void mod(StringBuilder builder, Map<Node, Register> registers, Node node) {
-        Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
-        Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
-
-        String dividend = getOperand(leftNode, registers);
-        String divisor = getOperand(rightNode, registers);
+        String dividend = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)));
+        String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
@@ -164,11 +158,8 @@ public class CodeGenerator {
     }
 
     private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation) {
-        Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
-        Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
-
-        String lhs = getOperand(leftNode, registers);
-        String rhs = getOperand(rightNode, registers);
+        String lhs = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)));
+        String rhs = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
         if (!dest.equals(lhs)) {
@@ -179,7 +170,7 @@ public class CodeGenerator {
                     .append("\n");
         }
 
-        builder.append("  ")
+        builder.append("\t")
                 .append(operation)
                 .append(" ")
                 .append(rhs)
@@ -203,13 +194,13 @@ public class CodeGenerator {
         };
     }
 
+    /*
     private static String getOperand(Node node, Map<Node, Register> registers) {
-        if (node instanceof ConstIntNode c) {
-            return "$" + c.value(); // use immediate constant
-        } else {
-            return regAllocate(registers.get(node)); // fallback to register
-        }
+        return node instanceof ConstIntNode c
+                ? "$" + c.value() // use immediate constant
+                : regAllocate(registers.get(node)); // fallback to register
     }
+     */
 
 
     private static void binary(
