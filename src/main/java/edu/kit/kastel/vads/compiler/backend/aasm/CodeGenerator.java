@@ -39,17 +39,27 @@ public class CodeGenerator {
         return builder.toString();
     }
 
-    public String generateAssembly(List<IrGraph> program) {
+    public String generateAssembly(List<IrGraph> program) { // Using AT&T style instead of Intel style to meet the requirement of gcc
         StringBuilder builder = new StringBuilder();
         for (IrGraph graph : program) {
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
-            builder.append("section .text\n")
-                    .append("global main\n\nmain:\n");
+            builder.append("\t.text\n")
+                    .append("\t.globl ")
+                    .append(graph.name())
+                    .append("\n")
+                    .append(graph.name())
+                    .append(":\n");
+
+            // Prologue, though not needed for simple compiling like this
+            builder.append("\tpushl %ebp\n");
+            builder.append("\tmovl %esp, %ebp\n");
 
             generateAssemblyForGraph(graph, builder, registers);
 
-            builder.append("\tret");
+            // Epilogue
+            builder.append("\tpopl %ebp\n");
+            builder.append("\tret\n");
         }
         return builder.toString();
     }
@@ -67,23 +77,21 @@ public class CodeGenerator {
         }
 
         switch (node) {
-            case AddNode add -> binaryAsm(builder, registers, add, "add");
-            case SubNode sub -> binaryAsm(builder, registers, sub, "sub");
-            case MulNode mul -> binaryAsm(builder, registers, mul, "imul");  // 32-bit, imulq for 64-bit
+            case AddNode add -> binaryAsm(builder, registers, add, "addl");
+            case SubNode sub -> binaryAsm(builder, registers, sub, "subl");
+            case MulNode mul -> binaryAsm(builder, registers, mul, "imull");  // 32-bit, imulq for 64-bit
             case DivNode div -> divide(builder, registers, div);
             case ModNode mod -> mod(builder, registers, mod);
             case ReturnNode r -> {
                 Node res = predecessorSkipProj(r, ReturnNode.RESULT);
-                builder.append("\tmov eax, ")
+                builder.append("\tmovl ")
                         .append(regAllocate(registers.get(res)))
-                        .append("\n");
+                        .append(", %eax\n");
             }
             case ConstIntNode c -> {
                 String dest = regAllocate(registers.get(c));
-                builder.append("\tmov ")
-                        .append(dest)
-                        .append(", ")
-                        .append(c.value())
+                builder.append("\tmovl $").append(c.value())
+                        .append(", ").append(dest)
                         .append("\n");
             }
             case Phi _ -> throw new UnsupportedOperationException("phi");
@@ -132,10 +140,10 @@ public class CodeGenerator {
         String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
-        builder.append("\tmov eax, ").append(dividend).append("\n");
-        builder.append("\tcdq\n"); // convert long to doubleword, unter atnt cltd
-        builder.append("\tidiv ").append(divisor).append("\n");
-        builder.append("\tmov ").append(dest).append(", eax\n"); // result
+        builder.append("\tmovl ").append(dividend).append(", %eax\n");
+        builder.append("\tcltd\n"); // convert long to doubleword
+        builder.append("\tidivl ").append(divisor).append("\n");
+        builder.append("\tmovl %eax, ").append(dest).append("\n"); // result
     }
 
     private static void mod(StringBuilder builder, Map<Node, Register> registers, Node node) {
@@ -143,10 +151,10 @@ public class CodeGenerator {
         String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
-        builder.append("\tmov eax, ").append(dividend).append("\n");
-        builder.append("\tcdq\n"); // convert long to doubleword, Intel standard
-        builder.append("\tidiv ").append(divisor).append("\n");
-        builder.append("\tmov ").append(dest).append(", edx\n"); // result, notice edx here
+        builder.append("\tmovl ").append(dividend).append(", %eax\n");
+        builder.append("\tcltd\n"); // convert long to doubleword, ATnT standard
+        builder.append("\tidivl ").append(divisor).append("\n");
+        builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here
     }
 
     private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation) {
@@ -155,31 +163,41 @@ public class CodeGenerator {
         String dest = regAllocate(registers.get(node));
 
         if (!dest.equals(lhs)) {
-            builder.append("\tmov ")
-                    .append(dest)
-                    .append(", ")
+            builder.append("\tmovl ")
                     .append(lhs)
+                    .append(", ")
+                    .append(dest)
                     .append("\n");
         }
 
         builder.append("\t")
                 .append(operation)
                 .append(" ")
-                .append(dest)
-                .append(", ")
                 .append(rhs)
+                .append(", ")
+                .append(dest)
                 .append("\n");
     }
 
     private static String regAllocate(Register r) {
         int id = ((VirtualRegister) r).id();
         return switch (id) {
-            case 0 -> "eax";
-            case 1 -> "ebx";
-            case 2 -> "ecx";
-            case 3 -> "edx";
-            case 4 -> "esi";
-            case 5 -> "edi";
+            /*
+            case 0 -> "%r8d";
+            case 1 -> "%r9d";
+            case 2 -> "%r10d";
+            case 3 -> "%r11d";
+            case 4 -> "%r12d";
+            case 5 -> "%r13d";
+            case 6 -> "%r14d";
+            case 7 -> "%r15d";
+             */
+            case 0 -> "%eax";
+            case 1 -> "%ebx";
+            case 2 -> "%ecx";
+            case 3 -> "%edx";
+            case 4 -> "%esi";
+            case 5 -> "%edi";
             default -> throw new IllegalArgumentException("Too many registers: " + id);
         };
     }

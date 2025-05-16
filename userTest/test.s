@@ -1,10 +1,12 @@
-section .text
-global main
-
+	.text
+	.globl main
 main:
-	mov eax, 5
-	mov ebx, 2
-	mov ecx, eax
-	add ecx, ebx
-	mov eax, ecx
+	pushl %ebp
+	movl %esp, %ebp
+	movl $10, %eax
+	movl $32, %ebx
+	movl %eax, %ecx
+	addl %ebx, %ecx
+	movl %ecx, %eax
+	popl %ebp
 	ret
