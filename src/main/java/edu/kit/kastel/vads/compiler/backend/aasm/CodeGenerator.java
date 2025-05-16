@@ -47,15 +47,11 @@ public class CodeGenerator {
             builder.append("section .text\n")
                     .append("global _start\n\n_start:\n");
 
-            // Prologue, though not needed for simple compiling like this
-            builder.append("\tpush ebp\n");
-            builder.append("\tmov ebp, esp\n");
-
             generateAssemblyForGraph(graph, builder, registers);
 
-            // Epilogue
-            builder.append("\tpop ebp\n");
-            builder.append("\tret\n");
+            builder.append("\tmov ebx, eax\n")
+                    .append("\tmov eax, 1\n")
+                    .append("\tint 0x80\n");
         }
         return builder.toString();
     }
