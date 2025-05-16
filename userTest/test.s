@@ -1,12 +1,13 @@
-	.text
-	.globl main
+section .text
+global main
+
 main:
-	pushl %ebp
-	movl %esp, %ebp
-	movl $10, %eax
-	movl $32, %ebx
-	movl %eax, %ecx
-	addl %ebx, %ecx
-	movl %ecx, %eax
-	popl %ebp
+	push ebp
+	mov ebp, esp
+	mov eax, 2
+	mov ebx, 1
+	mov ecx, eax
+	add ecx, ebx
+	mov eax, ecx
+	pop ebp
 	ret
