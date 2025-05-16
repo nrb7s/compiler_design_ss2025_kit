@@ -54,6 +54,22 @@ public class Main {
         // for test run "./run.sh ./userTest/test.vads ./userTest/test.s" after built
         String s = new CodeGenerator().generateAssembly(graphs);
         Files.writeString(output, s);
+
+        // invoke gcc
+        String outputExecutable = output.toString().replaceAll("\\.s$", "");
+        Process gcc = new ProcessBuilder("gcc", "-o", outputExecutable, output.toString())
+                .inheritIO()
+                .start();
+        try {
+            int exitCode = gcc.waitFor();
+            if (exitCode != 0) {
+                System.err.println("gcc failed with exit code " + exitCode);
+                System.exit(8);
+            }
+        } catch (InterruptedException e) {
+            System.err.println("gcc was interrupted");
+            System.exit(9);
+        }
     }
 
     private static ProgramTree lexAndParse(Path input) throws IOException {
