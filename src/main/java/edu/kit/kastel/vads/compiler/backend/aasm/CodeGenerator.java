@@ -45,13 +45,11 @@ public class CodeGenerator {
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
             builder.append("section .text\n")
-                    .append("global _start\n\n_start:\n");
+                    .append("global main\n\nmain:\n");
 
             generateAssemblyForGraph(graph, builder, registers);
 
-            builder.append("\tmov ebx, eax\n")
-                    .append("\tmov eax, 1\n")
-                    .append("\tint 0x80\n");
+            builder.append("\tret");
         }
         return builder.toString();
     }
