@@ -158,8 +158,11 @@ public class CodeGenerator {
     }
 
     private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation) {
-        String lhs = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)));
-        String rhs = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
+        Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
+        Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
+
+        String lhs = getOperand(leftNode, registers);
+        String rhs = getOperand(rightNode, registers);
         String dest = regAllocate(registers.get(node));
 
         if (!dest.equals(lhs)) {
@@ -193,6 +196,15 @@ public class CodeGenerator {
             default -> throw new IllegalArgumentException("Too many registers: " + id);
         };
     }
+
+    private static String getOperand(Node node, Map<Node, Register> registers) {
+        if (node instanceof ConstIntNode c) {
+            return "$" + c.value(); // use immediate constant
+        } else {
+            return regAllocate(registers.get(node)); // fallback to register
+        }
+    }
+
 
     private static void binary(
         StringBuilder builder,
