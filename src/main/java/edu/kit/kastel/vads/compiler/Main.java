@@ -56,7 +56,8 @@ public class Main {
         Files.writeString(output, s);
 
         // invoke gcc
-        String outputExecutable = output.toString().replaceAll("\\.s$", "");
+        String outputStr = output.toString();
+        String outputExecutable = outputStr.substring(0, outputStr.length() - 2);
         Process gcc = new ProcessBuilder("gcc", "-o", outputExecutable, output.toString())
                 .inheritIO()
                 .start();
