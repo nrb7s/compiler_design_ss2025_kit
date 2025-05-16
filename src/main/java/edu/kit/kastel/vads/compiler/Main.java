@@ -57,11 +57,7 @@ public class Main {
 
         // invoke gcc
         String outputStr = output.toString();
-        String outputExecutable = outputStr.substring(0, outputStr.length() - 2);
-
-        // test
-        System.out.println("Assembly file path: " + output.toAbsolutePath());
-        System.out.println("Executable output path: " + outputExecutable);
+        String outputExecutable = outputStr.substring(0, outputStr.length() - 3); // duck?
 
         Process gcc = new ProcessBuilder("gcc", "-o", outputExecutable, output.toString())
                 .inheritIO()
