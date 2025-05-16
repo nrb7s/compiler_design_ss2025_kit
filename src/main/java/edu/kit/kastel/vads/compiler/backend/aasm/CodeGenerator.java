@@ -163,7 +163,7 @@ public class CodeGenerator {
         String dest = regAllocate(registers.get(node));
 
         if (!dest.equals(lhs)) {
-            builder.append("  movl ")
+            builder.append("\tmovl ")
                     .append(lhs)
                     .append(", ")
                     .append(dest)
@@ -182,13 +182,14 @@ public class CodeGenerator {
     private static String regAllocate(Register r) {
         int id = ((VirtualRegister) r).id();
         return switch (id) {
-            // also "%r8d", "%r9d"
-            case 0 -> "%r10d";
-            case 1 -> "%r11d";
-            case 2 -> "%r12d";
-            case 3 -> "%r13d";
-            case 4 -> "%r14d";
-            case 5 -> "%r15d";
+            case 0 -> "%r8d";
+            case 1 -> "%r9d";
+            case 2 -> "%r10d";
+            case 3 -> "%r11d";
+            case 4 -> "%r12d";
+            case 5 -> "%r13d";
+            case 6 -> "%r14d";
+            case 7 -> "%r15d";
             default -> throw new IllegalArgumentException("Too many registers: " + id);
         };
     }
