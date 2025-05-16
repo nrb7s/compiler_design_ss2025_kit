@@ -39,7 +39,7 @@ public class CodeGenerator {
         return builder.toString();
     }
 
-    public String generateAssembly(List<IrGraph> program) {
+    public String generateAssembly(List<IrGraph> program) { // Using AT&T style instead of Intel style to meet the requirement of gcc
         StringBuilder builder = new StringBuilder();
         for (IrGraph graph : program) {
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
@@ -84,13 +84,13 @@ public class CodeGenerator {
             case ModNode mod -> mod(builder, registers, mod);
             case ReturnNode r -> {
                 Node res = predecessorSkipProj(r, ReturnNode.RESULT);
-                builder.append("  movl ")
+                builder.append("\tmovl ")
                         .append(regAllocate(registers.get(res)))
                         .append(", %eax\n");
             }
             case ConstIntNode c -> {
                 String dest = regAllocate(registers.get(c));
-                builder.append("  movl $").append(c.value())
+                builder.append("\tmovl $").append(c.value())
                         .append(", ").append(dest)
                         .append("\n");
             }
@@ -140,10 +140,13 @@ public class CodeGenerator {
         String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
-        builder.append("  movl ").append(dividend).append(", %eax\n");
-        builder.append("  cltd\n"); // convert long to doubleword
-        builder.append("  idivl ").append(divisor).append("\n");
-        builder.append("  movl %eax, ").append(dest).append("\n"); // result
+        builder.append("\tcmp ").append(divisor).append(", 0\n");
+        builder.append("\tje division_by_zero_error\n");
+
+        builder.append("\tmovl ").append(dividend).append(", %eax\n");
+        builder.append("\tcltd\n"); // convert long to doubleword
+        builder.append("\tidivl ").append(divisor).append("\n");
+        builder.append("\tmovl %eax, ").append(dest).append("\n"); // result
     }
 
     private static void mod(StringBuilder builder, Map<Node, Register> registers, Node node) {
@@ -151,10 +154,10 @@ public class CodeGenerator {
         String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
-        builder.append("  movl ").append(dividend).append(", %eax\n");
-        builder.append("  cltd\n"); // convert long to doubleword
-        builder.append("  idivl ").append(divisor).append("\n");
-        builder.append("  movl %edx, ").append(dest).append("\n"); // result, notice edx here
+        builder.append("\tmovl ").append(dividend).append(", %eax\n");
+        builder.append("\tcltd\n"); // convert long to doubleword, ATnT standard
+        builder.append("\tidivl ").append(divisor).append("\n");
+        builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here
     }
 
     private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation) {
@@ -182,6 +185,7 @@ public class CodeGenerator {
     private static String regAllocate(Register r) {
         int id = ((VirtualRegister) r).id();
         return switch (id) {
+            // also "%r8d", "%r9d"
             case 0 -> "%r10d";
             case 1 -> "%r11d";
             case 2 -> "%r12d";
