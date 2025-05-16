@@ -39,6 +39,69 @@ public class CodeGenerator {
         return builder.toString();
     }
 
+    public String generateAssembly(List<IrGraph> program) {
+        StringBuilder builder = new StringBuilder();
+        for (IrGraph graph : program) {
+            AasmRegisterAllocator allocator = new AasmRegisterAllocator();
+            Map<Node, Register> registers = allocator.allocateRegisters(graph);
+            builder.append("\t.text\n")
+                    .append("\t.globl ")
+                    .append(graph.name())
+                    .append("\n")
+                    .append(graph.name())
+                    .append(":\n");
+
+            // Prologue, though not needed for simple compiling like this
+            builder.append("\tpushl %rbp\n");
+            builder.append("\tmovl %rsp, %rbp\n");
+
+            generateAssemblyForGraph(graph, builder, registers);
+
+            // Epilogue
+            builder.append("\tpopl %rbp\n");
+            builder.append("\tret\n");
+        }
+        return builder.toString();
+    }
+
+    private void generateAssemblyForGraph(IrGraph graph, StringBuilder builder, Map<Node, Register> registers) {
+        Set<Node> visited = new HashSet<>();
+        scanAsm(graph.endBlock(), visited, builder, registers);
+    }
+
+    private void scanAsm(Node node, Set<Node> visited, StringBuilder builder, Map<Node, Register> registers) {
+        for (Node predecessor : node.predecessors()) {
+            if (!visited.contains(predecessor)) {
+                scanAsm(predecessor, visited, builder, registers);
+            }
+        }
+
+        switch (node) {
+            case AddNode add -> binaryAsm(builder, registers, add, "addl");
+            case SubNode sub -> binaryAsm(builder, registers, sub, "subl");
+            case MulNode mul -> binaryAsm(builder, registers, mul, "imull");  // 32-bit, imulq for 64-bit
+            case DivNode div -> divide(builder, registers, div);
+            case ModNode mod -> mod(builder, registers, mod);
+            case ReturnNode r -> {
+                Node res = predecessorSkipProj(r, ReturnNode.RESULT);
+                builder.append("  movl ")
+                        .append(regAllocate(registers.get(res)))
+                        .append(", %eax\n");
+            }
+            case ConstIntNode c -> {
+                String dest = regAllocate(registers.get(c));
+                builder.append("  movl $").append(c.value())
+                        .append(", ").append(dest)
+                        .append("\n");
+            }
+            case Phi _ -> throw new UnsupportedOperationException("phi");
+            case Block _, ProjNode _, StartNode _ -> {
+                // do nothing, skip line break
+                return;
+            }
+        }
+    }
+
     private void generateForGraph(IrGraph graph, StringBuilder builder, Map<Node, Register> registers) {
         Set<Node> visited = new HashSet<>();
         scan(graph.endBlock(), visited, builder, registers);
@@ -70,6 +133,63 @@ public class CodeGenerator {
             }
         }
         builder.append("\n");
+    }
+
+    private static void divide(StringBuilder builder, Map<Node, Register> registers, Node node) {
+        String dividend = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)));
+        String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
+        String dest = regAllocate(registers.get(node));
+
+        builder.append("  movl ").append(dividend).append(", %eax\n");
+        builder.append("  cltd\n"); // convert long to doubleword
+        builder.append("  idivl ").append(divisor).append("\n");
+        builder.append("  movl %eax, ").append(dest).append("\n"); // result
+    }
+
+    private static void mod(StringBuilder builder, Map<Node, Register> registers, Node node) {
+        String dividend = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)));
+        String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
+        String dest = regAllocate(registers.get(node));
+
+        builder.append("  movl ").append(dividend).append(", %eax\n");
+        builder.append("  cltd\n"); // convert long to doubleword
+        builder.append("  idivl ").append(divisor).append("\n");
+        builder.append("  movl %edx, ").append(dest).append("\n"); // result, notice edx here
+    }
+
+    private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation) {
+        String lhs = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)));
+        String rhs = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
+        String dest = regAllocate(registers.get(node));
+
+        if (!dest.equals(lhs)) {
+            builder.append("  movl ")
+                    .append(lhs)
+                    .append(", ")
+                    .append(dest)
+                    .append("\n");
+        }
+
+        builder.append("  ")
+                .append(operation)
+                .append(" ")
+                .append(rhs)
+                .append(", ")
+                .append(dest)
+                .append("\n");
+    }
+
+    private static String regAllocate(Register r) {
+        int id = ((VirtualRegister) r).id();
+        return switch (id) {
+            case 0 -> "%r10d";
+            case 1 -> "%r11d";
+            case 2 -> "%r12d";
+            case 3 -> "%r13d";
+            case 4 -> "%r14d";
+            case 5 -> "%r15d";
+            default -> throw new IllegalArgumentException("Too many registers: " + id);
+        };
     }
 
     private static void binary(

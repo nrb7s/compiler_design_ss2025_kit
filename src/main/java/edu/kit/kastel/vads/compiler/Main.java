@@ -50,7 +50,8 @@ public class Main {
         }
 
         // TODO: generate assembly and invoke gcc instead of generating abstract assembly
-        String s = new CodeGenerator().generateCode(graphs);
+        // String s = new CodeGenerator().generateCode(graphs);
+        String s = new CodeGenerator().generateAssembly(graphs);
         Files.writeString(output, s);
     }
 
