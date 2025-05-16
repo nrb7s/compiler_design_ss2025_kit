@@ -3,10 +3,10 @@
 main:
 	pushl %ebp
 	movl %esp, %ebp
-	movl $10, %eax
-	movl $32, %ebx
-	movl %eax, %ecx
-	addl %ebx, %ecx
-	movl %ecx, %eax
+	movq $2, %rax
+	movq $5, %rbx
+	movq %rax, %rcx
+	addq %rbx, %rcx
+	movq %rcx, %eax
 	popl %ebp
 	ret

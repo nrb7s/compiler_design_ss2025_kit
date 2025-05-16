@@ -77,20 +77,20 @@ public class CodeGenerator {
         }
 
         switch (node) {
-            case AddNode add -> binaryAsm(builder, registers, add, "addl");
-            case SubNode sub -> binaryAsm(builder, registers, sub, "subl");
-            case MulNode mul -> binaryAsm(builder, registers, mul, "imull");  // 32-bit, imulq for 64-bit
+            case AddNode add -> binaryAsm(builder, registers, add, "addq");
+            case SubNode sub -> binaryAsm(builder, registers, sub, "subq");
+            case MulNode mul -> binaryAsm(builder, registers, mul, "imulq");  // 32-bit, imulq for 64-bit
             case DivNode div -> divide(builder, registers, div);
             case ModNode mod -> mod(builder, registers, mod);
             case ReturnNode r -> {
                 Node res = predecessorSkipProj(r, ReturnNode.RESULT);
-                builder.append("\tmovl ")
+                builder.append("\tmovq ")
                         .append(regAllocate(registers.get(res)))
                         .append(", %eax\n");
             }
             case ConstIntNode c -> {
                 String dest = regAllocate(registers.get(c));
-                builder.append("\tmovl $").append(c.value())
+                builder.append("\tmovq $").append(c.value())
                         .append(", ").append(dest)
                         .append("\n");
             }
@@ -140,10 +140,10 @@ public class CodeGenerator {
         String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
-        builder.append("\tmovl ").append(dividend).append(", %eax\n");
-        builder.append("\tcltd\n"); // convert long to doubleword
-        builder.append("\tidivl ").append(divisor).append("\n");
-        builder.append("\tmovl %eax, ").append(dest).append("\n"); // result
+        builder.append("\tmovq ").append(dividend).append(", %eax\n");
+        builder.append("\tcqto\n");
+        builder.append("\tidivq ").append(divisor).append("\n");
+        builder.append("\tmovq %eax, ").append(dest).append("\n"); // result
     }
 
     private static void mod(StringBuilder builder, Map<Node, Register> registers, Node node) {
@@ -151,10 +151,10 @@ public class CodeGenerator {
         String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
-        builder.append("\tmovl ").append(dividend).append(", %eax\n");
-        builder.append("\tcltd\n"); // convert long to doubleword, ATnT standard
-        builder.append("\tidivl ").append(divisor).append("\n");
-        builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here
+        builder.append("\tmovq ").append(dividend).append(", %eax\n");
+        builder.append("\tcqto\n"); //  sign-extend, ATnT standard
+        builder.append("\tidivq ").append(divisor).append("\n");
+        builder.append("\tmovq %edx, ").append(dest).append("\n"); // result, notice edx here
     }
 
     private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation) {
@@ -163,7 +163,7 @@ public class CodeGenerator {
         String dest = regAllocate(registers.get(node));
 
         if (!dest.equals(lhs)) {
-            builder.append("\tmovl ")
+            builder.append("\tmovq ")
                     .append(lhs)
                     .append(", ")
                     .append(dest)
@@ -192,12 +192,12 @@ public class CodeGenerator {
             case 6 -> "%r14d";
             case 7 -> "%r15d";
              */
-            case 0 -> "%eax";
-            case 1 -> "%ebx";
-            case 2 -> "%ecx";
-            case 3 -> "%edx";
-            case 4 -> "%esi";
-            case 5 -> "%edi";
+            case 0 -> "%rax";
+            case 1 -> "%rbx";
+            case 2 -> "%rcx";
+            case 3 -> "%rdx";
+            case 4 -> "%rsi";
+            case 5 -> "%rdi";
             default -> throw new IllegalArgumentException("Too many registers: " + id);
         };
     }
