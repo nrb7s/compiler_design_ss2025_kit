@@ -2,23 +2,23 @@
 	.text
 	.globl main
 main:
-	movq $5, %rax
-	movq $5, %rax
-	movq $5, %rax
-	movq %rax, %rbx
-	subq %rax, %rbx
-	movq %rax, %rax
-	cqto
-	idivq %rbx
-	movq %rax, %rcx
-	movq $5, %rax
-	movq $5, %rax
-	movq $5, %rax
-	movq %rax, %rbx
-	subq %rax, %rbx
-	movq %rax, %rax
-	cqto
-	idivq %rbx
-	movq %rax, %rcx
-	movq %rcx, %rax
+	movl $5, %eax
+	movl $5, %eax
+	movl $5, %eax
+	movl %eax, %ebx
+	subl %eax, %ebx
+	movl %eax, %eax
+	cdq
+	idivl %ebx
+	movl %eax, %ecx
+	movl $5, %eax
+	movl $5, %eax
+	movl $5, %eax
+	movl %eax, %ebx
+	subl %eax, %ebx
+	movl %eax, %eax
+	cdq
+	idivl %ebx
+	movl %eax, %ecx
+	movl %ecx, %eax
 	ret
