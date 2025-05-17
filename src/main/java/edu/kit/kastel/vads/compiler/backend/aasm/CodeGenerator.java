@@ -141,10 +141,10 @@ public class CodeGenerator {
         String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
-        builder.append("\tmovq ").append(dividend).append(", %eax\n");
+        builder.append("\tmovq ").append(dividend).append(", %rax\n");
         builder.append("\tcqto\n");
         builder.append("\tidivq ").append(divisor).append("\n");
-        builder.append("\tmovq %eax, ").append(dest).append("\n"); // result
+        builder.append("\tmovq %rax, ").append(dest).append("\n"); // result
     }
 
     private static void mod(StringBuilder builder, Map<Node, Register> registers, Node node) {
@@ -152,10 +152,10 @@ public class CodeGenerator {
         String divisor = regAllocate(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
         String dest = regAllocate(registers.get(node));
 
-        builder.append("\tmovq ").append(dividend).append(", %eax\n");
+        builder.append("\tmovq ").append(dividend).append(", %rax\n");
         builder.append("\tcqto\n"); //  sign-extend, ATnT standard
         builder.append("\tidivq ").append(divisor).append("\n");
-        builder.append("\tmovq %edx, ").append(dest).append("\n"); // result, notice edx here
+        builder.append("\tmovq %rdx, ").append(dest).append("\n"); // result, notice edx here
     }
 
     private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation) {
