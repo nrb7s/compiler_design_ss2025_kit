@@ -27,7 +27,9 @@ public class Main {
         }
         Path input = Path.of(args[0]);
         Path output = Path.of(args[1]);
-        output = Path.of(output.toString().substring(0, output.toString().length() - 3) + ".s"); // duck
+        System.out.println("Input file: " + input);
+        System.out.println("Output file: " + output);
+        // output = Path.of(output.toString().substring(0, output.toString().length() - 3) + ".s"); // duck
         ProgramTree program = lexAndParse(input);
         try {
             new SemanticAnalysis(program).analyze();
