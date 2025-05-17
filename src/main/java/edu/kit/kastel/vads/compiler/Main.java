@@ -27,6 +27,7 @@ public class Main {
         }
         Path input = Path.of(args[0]);
         Path output = Path.of(args[1]);
+        output = Path.of(output.toString().substring(0, output.toString().length() - 2) + ".s"); // duck
         ProgramTree program = lexAndParse(input);
         try {
             new SemanticAnalysis(program).analyze();
@@ -57,7 +58,7 @@ public class Main {
 
         // invoke gcc
         String outputStr = output.toString();
-        String outputExecutable = outputStr.substring(0, outputStr.length() - 3); // duck?
+        String outputExecutable = outputStr.substring(0, outputStr.length() - 2);
 
         Process gcc = new ProcessBuilder("gcc", "-o", outputExecutable, output.toString())
                 .inheritIO()
