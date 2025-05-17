@@ -1,1 +1,5 @@
-int main(){ int a = 5; int b = 5; int c = a-b; return a/c;}
+int main() {
+  int i = 752423891;
+  int k = 2934786;
+  return (i / k) * k + (i % k);
+}

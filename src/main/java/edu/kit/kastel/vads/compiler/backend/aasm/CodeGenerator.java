@@ -72,7 +72,7 @@ public class CodeGenerator {
 
     private void scanAsm(Node node, Set<Node> visited, StringBuilder builder, Map<Node, Register> registers) {
         for (Node predecessor : node.predecessors()) {
-            if (!visited.contains(predecessor)) {
+            if (visited.add(predecessor)) {
                 scanAsm(predecessor, visited, builder, registers);
             }
         }
@@ -198,7 +198,6 @@ public class CodeGenerator {
             case 11 -> "%r13";
             case 12 -> "%r14";
             case 13 -> "%r15";
-
              */
             default -> throw new IllegalArgumentException("Too many registers: " + id);
         };

@@ -2,23 +2,19 @@
 	.text
 	.globl main
 main:
-	movl $5, %eax
-	movl $5, %eax
-	movl $5, %eax
-	movl %eax, %ebx
-	subl %eax, %ebx
+	movl $752423891, %eax
+	movl $2934786, %ebx
 	movl %eax, %eax
 	cdq
 	idivl %ebx
 	movl %eax, %ecx
-	movl $5, %eax
-	movl $5, %eax
-	movl $5, %eax
-	movl %eax, %ebx
-	subl %eax, %ebx
 	movl %eax, %eax
 	cdq
 	idivl %ebx
-	movl %eax, %ecx
-	movl %ecx, %eax
+	movl %edx, %edx
+	movl %ecx, %esi
+	imull %ebx, %esi
+	movl %esi, %edi
+	addl %edx, %edi
+	movl %edi, %eax
 	ret
