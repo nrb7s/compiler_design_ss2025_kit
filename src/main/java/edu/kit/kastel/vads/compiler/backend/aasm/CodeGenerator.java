@@ -199,6 +199,14 @@ public class CodeGenerator {
             case 3 -> "%rdx";
             case 4 -> "%rsi";
             case 5 -> "%rdi";
+            case 6 -> "%r8";
+            case 7 -> "%r9";
+            case 8 -> "%r10";
+            case 9 -> "%r11";
+            case 10 -> "%r12";
+            case 11 -> "%r13";
+            case 12 -> "%r14";
+            case 13 -> "%r15";
             default -> throw new IllegalArgumentException("Too many registers: " + id);
         };
     }

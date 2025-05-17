@@ -27,8 +27,6 @@ public class Main {
         }
         Path input = Path.of(args[0]);
         Path output = Path.of(args[1]);
-        System.out.println("Input file: " + input);
-        System.out.println("Output file: " + output);
         output = Path.of(output.toString() + ".s"); // duck
         ProgramTree program = lexAndParse(input);
         try {
