@@ -155,7 +155,7 @@ public class CodeGenerator {
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n"); //  sign-extend, ATnT standard
         builder.append("\tidivl ").append(divisor).append("\n");
-        builder.append("\tmovl %rdx, ").append(dest).append("\n"); // result, notice edx here
+        builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here
     }
 
     private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation) {
