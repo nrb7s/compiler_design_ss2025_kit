@@ -37,11 +37,13 @@ public class Main {
             return;
         }
 
-        // error 42 for correct main entry
-        boolean hasValidMain = program.topLevelTrees().stream().anyMatch(f -> f.name().name().equals("main"));
-        if (!hasValidMain) {
+        // check main()
+        boolean hasMain = program.topLevelTrees().stream()
+                .anyMatch(f -> f.name().equals("main"));
+        if (!hasMain) {
             System.exit(42);
         }
+
 
         List<IrGraph> graphs = new ArrayList<>();
         for (FunctionTree function : program.topLevelTrees()) {
