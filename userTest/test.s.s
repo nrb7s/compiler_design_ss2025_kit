@@ -2,19 +2,25 @@
 	.text
 	.globl main
 main:
-	movl $752423891, %eax
-	movl $2934786, %ebx
+	pushl %ebp
+	movl %esp, %ebp
+	subl $8, %esp
+	movl $6, %eax
+	movl $3, %ebx
 	movl %eax, %eax
 	cdq
 	idivl %ebx
 	movl %eax, %ecx
-	movl %eax, %eax
-	cdq
-	idivl %ebx
-	movl %edx, %edx
-	movl %ecx, %esi
-	imull %ebx, %esi
-	movl %esi, %edi
-	addl %edx, %edi
-	movl %edi, %eax
+	movl $2, %edx
+	movl %edx, %esi
+	addl %ebx, %esi
+	movl $4, %edi
+	movl %esi, -4(%ebp)
+	imull %edi, -4(%ebp)
+	movl -4(%ebp), -8(%ebp)
+	subl %ecx, -8(%ebp)
+	movl -8(%ebp), %eax
+	movl %ebp, %esp
+	popl %ebp
 	ret
+
