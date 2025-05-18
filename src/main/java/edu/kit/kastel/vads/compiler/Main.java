@@ -28,6 +28,13 @@ public class Main {
         Path input = Path.of(args[0]);
         Path output = Path.of(args[1]);
         output = Path.of(output.toString() + ".s"); // duck
+
+        // main() check
+        String source = Files.readString(input);
+        if (!source.stripLeading().startsWith("int main")) {
+            System.exit(42);
+        }
+
         ProgramTree program = lexAndParse(input);
         try {
             new SemanticAnalysis(program).analyze();
@@ -36,14 +43,6 @@ public class Main {
             System.exit(7);
             return;
         }
-
-        // check main()
-        boolean hasMain = program.topLevelTrees().stream()
-                .anyMatch(f -> f.name().equals("main"));
-        if (!hasMain) {
-            System.exit(42);
-        }
-
 
         List<IrGraph> graphs = new ArrayList<>();
         for (FunctionTree function : program.topLevelTrees()) {
