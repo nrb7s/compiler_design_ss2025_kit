@@ -160,15 +160,18 @@ public class CodeGenerator {
         Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
 
         String dividend = regAllocate(leftNode, registers, spillOffset);
-        String divisor = regAllocate(rightNode, registers, spillOffset);
+        String rawDivisor = regAllocate(rightNode, registers, spillOffset);
         String dest = regAllocate(node, registers, spillOffset);
+        String divisor;
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n");
 
-        if (divisor.contains("-")) { // is in mem
-            builder.append("\tmovl ").append(divisor).append(", %ecx\n");
+        if (rawDivisor.contains("-")|| rawDivisor.equals("%edx")) { // is mem to mem or edx will collapse with cdq since cdq -> eax -> edx:eax
+            builder.append("\tmovl ").append(rawDivisor).append(", %ecx\n");
             divisor = "%ecx";
+        } else {
+            divisor = rawDivisor;
         }
 
         builder.append("\tidivl ").append(divisor).append("\n");
@@ -180,15 +183,18 @@ public class CodeGenerator {
         Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
 
         String dividend = regAllocate(leftNode, registers, spillOffset);
-        String divisor = regAllocate(rightNode, registers, spillOffset);
+        String rawDivisor = regAllocate(rightNode, registers, spillOffset);
         String dest = regAllocate(node, registers, spillOffset);
+        String divisor;
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n"); //  sign-extend, ATnT standard
 
-        if (divisor.contains("-")) {
-            builder.append("\tmovl ").append(divisor).append(", %ecx\n");
+        if (rawDivisor.contains("-")|| rawDivisor.equals("%edx")) {
+            builder.append("\tmovl ").append(rawDivisor).append(", %ecx\n");
             divisor = "%ecx";
+        } else {
+            divisor = rawDivisor;
         }
         builder.append("\tidivl ").append(divisor).append("\n");
         builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here
