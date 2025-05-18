@@ -64,8 +64,8 @@ public class CodeGenerator {
             // Prologue and reserve stack for spilling
             builder.append("\t.globl ").append(graph.name()).append("\n");
             builder.append(graph.name()).append(":\n");
-            // builder.append("\tpushl %ebp\n");
-            // builder.append("\tmovl %esp, %ebp\n");
+            builder.append("\tpush %rbp\n");  // notice 64bit here
+            builder.append("\tmov %rsp, %rbp\n");
             if (totalSpillBytes > 0) {
                 builder.append("\tsubl $")
                         .append(totalSpillBytes)
@@ -77,6 +77,8 @@ public class CodeGenerator {
             // Epilogue
             // builder.append("\tpopp %rbp\n");
             // builder.append("\tleave\n"); // leave = movl %ebp, %esp then popl %ebp
+            builder.append("\tmov %rbp, %rsp\n")
+                    .append("\tpop %rbp\n");
             builder.append("\tret\n\n");
         }
         return builder.toString();
@@ -189,12 +191,21 @@ public class CodeGenerator {
         String rhs = regAllocate(rightNode, registers, spillOffset);
         String dest = regAllocate(node, registers, spillOffset);
 
+        boolean lhsIsMem = lhs.contains("-");
+        boolean destIsMem = dest.contains("-");
+
         if (!dest.equals(lhs)) {
-            builder.append("\tmovl ")
-                    .append(lhs)
-                    .append(", ")
-                    .append(dest)
-                    .append("\n");
+            if (lhsIsMem && destIsMem) {
+                // mem to mem move, use eax as medium
+                builder.append("\tmovl ").append(lhs).append(", %eax\n");
+                builder.append("\tmovl %eax, ").append(dest).append("\n");
+            } else {
+                builder.append("\tmovl ")
+                        .append(lhs)
+                        .append(", ")
+                        .append(dest)
+                        .append("\n");
+            }
         }
 
         builder.append("\t")
@@ -213,7 +224,7 @@ public class CodeGenerator {
             return PHYS_REGS[id];
         } else {
             int off = spillOffset.get(id);
-            return "-" + off + "(%ebp)";
+            return "-" + off + "(%rbp)";
         }
     }
 
