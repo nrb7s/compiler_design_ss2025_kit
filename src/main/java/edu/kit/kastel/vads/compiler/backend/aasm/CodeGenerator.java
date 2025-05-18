@@ -21,9 +21,10 @@ import java.util.*;
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 
 public class CodeGenerator {
-    private static final int PHYS_REG_COUNT = 4;
+    private static final int PHYS_REG_COUNT = 2;
+    // eax, edx reserved for imull and divl
     private static final String[] PHYS_REGS = {
-            "%eax", "%ebx", "%ecx", "%edx"
+            "%ebx", "%ecx"
     };
     private static final String TEMP_REG_1 = "%esi";
     private static final String TEMP_REG_2 = "%edi";
@@ -195,7 +196,7 @@ public class CodeGenerator {
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n"); //  sign-extend, ATnT standard
         builder.append("\tidivl ").append(divisor).append("\n");
-        builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here
+        builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here (cuz its mod
     }
 
     private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation, Map<Integer,Integer> spillOffset) {
