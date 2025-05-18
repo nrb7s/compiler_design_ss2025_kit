@@ -166,14 +166,14 @@ public class CodeGenerator {
         String dest = regAllocate(node, registers, spillOffset);
         String divisor = rawDivisor;
 
-        builder.append("\tmovl ").append(dividend).append(", %eax\n");
-        builder.append("\tcdq\n");
-
-        if (isMemory(rawDivisor) || rawDivisor.equals("%edx")) { // is mem to mem or edx will collapse with cdq since cdq -> eax -> edx:eax
+        // is mem to mem or edx will collapse with cdq since cdq -> eax -> edx:eax, clear for both
+        if (isMemory(rawDivisor) || rawDivisor.equals("%edx") || rawDivisor.equals("%eax")) {
             builder.append("\tmovl ").append(rawDivisor).append(", ").append(TEMP_REG_1).append("\n");
             divisor = TEMP_REG_1;
         }
 
+        builder.append("\tmovl ").append(dividend).append(", %eax\n");
+        builder.append("\tcdq\n");
         builder.append("\tidivl ").append(divisor).append("\n");
         builder.append("\tmovl %eax, ").append(dest).append("\n"); // result
     }
@@ -187,13 +187,13 @@ public class CodeGenerator {
         String dest = regAllocate(node, registers, spillOffset);
         String divisor = rawDivisor;
 
-        builder.append("\tmovl ").append(dividend).append(", %eax\n");
-        builder.append("\tcdq\n"); //  sign-extend, ATnT standard
-
-        if (isMemory(rawDivisor) || rawDivisor.equals("%edx")) {
+        if (isMemory(rawDivisor) || rawDivisor.equals("%edx") || rawDivisor.equals("%eax")) {
             builder.append("\tmovl ").append(rawDivisor).append(", ").append(TEMP_REG_1).append("\n");
             divisor = TEMP_REG_1;
         }
+
+        builder.append("\tmovl ").append(dividend).append(", %eax\n");
+        builder.append("\tcdq\n"); //  sign-extend, ATnT standard
         builder.append("\tidivl ").append(divisor).append("\n");
         builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here
     }
