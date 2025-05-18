@@ -170,7 +170,7 @@ public class CodeGenerator {
         builder.append("\tcdq\n");
 
         if (isMemory(rawDivisor) || rawDivisor.equals("%edx")) { // is mem to mem or edx will collapse with cdq since cdq -> eax -> edx:eax
-            builder.append("\tmovl ").append(rawDivisor).append(TEMP_REG_1).append("\n");
+            builder.append("\tmovl ").append(rawDivisor).append(", ").append(TEMP_REG_1).append("\n");
             divisor = TEMP_REG_1;
         }
 
@@ -191,7 +191,7 @@ public class CodeGenerator {
         builder.append("\tcdq\n"); //  sign-extend, ATnT standard
 
         if (isMemory(rawDivisor) || rawDivisor.equals("%edx")) {
-            builder.append("\tmovl ").append(rawDivisor).append(TEMP_REG_1).append("\n");
+            builder.append("\tmovl ").append(rawDivisor).append(", ").append(TEMP_REG_1).append("\n");
             divisor = TEMP_REG_1;
         }
         builder.append("\tidivl ").append(divisor).append("\n");
