@@ -21,10 +21,12 @@ import java.util.*;
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 
 public class CodeGenerator {
-    private static final int PHYS_REG_COUNT = 6;
+    private static final int PHYS_REG_COUNT = 4;
     private static final String[] PHYS_REGS = {
-            "%eax", "%ebx", "%ecx", "%edx", "%esi", "%edi"
+            "%eax", "%ebx", "%ecx", "%edx"
     };
+    private static final String TEMP_REG_1 = "%esi";
+    private static final String TEMP_REG_2 = "%edi";
 
     public String generateCode(List<IrGraph> program) {
         StringBuilder builder = new StringBuilder();
@@ -162,16 +164,14 @@ public class CodeGenerator {
         String dividend = regAllocate(leftNode, registers, spillOffset);
         String rawDivisor = regAllocate(rightNode, registers, spillOffset);
         String dest = regAllocate(node, registers, spillOffset);
-        String divisor;
+        String divisor = rawDivisor;
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n");
 
         if (isMemory(rawDivisor) || rawDivisor.equals("%edx")) { // is mem to mem or edx will collapse with cdq since cdq -> eax -> edx:eax
-            builder.append("\tmovl ").append(rawDivisor).append(", %ecx\n");
-            divisor = "%ecx";
-        } else {
-            divisor = rawDivisor;
+            builder.append("\tmovl ").append(rawDivisor).append(TEMP_REG_1).append("\n");
+            divisor = TEMP_REG_1;
         }
 
         builder.append("\tidivl ").append(divisor).append("\n");
@@ -185,16 +185,14 @@ public class CodeGenerator {
         String dividend = regAllocate(leftNode, registers, spillOffset);
         String rawDivisor = regAllocate(rightNode, registers, spillOffset);
         String dest = regAllocate(node, registers, spillOffset);
-        String divisor;
+        String divisor = rawDivisor;
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n"); //  sign-extend, ATnT standard
 
         if (isMemory(rawDivisor) || rawDivisor.equals("%edx")) {
-            builder.append("\tmovl ").append(rawDivisor).append(", %ecx\n");
-            divisor = "%ecx";
-        } else {
-            divisor = rawDivisor;
+            builder.append("\tmovl ").append(rawDivisor).append(TEMP_REG_1).append("\n");
+            divisor = TEMP_REG_1;
         }
         builder.append("\tidivl ").append(divisor).append("\n");
         builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here
@@ -211,8 +209,8 @@ public class CodeGenerator {
         if (!dest.equals(lhs)) {
             if (isMemory(lhs) && isMemory(dest)) {
                 // mem to mem move, use eax as medium
-                builder.append("\tmovl ").append(lhs).append(", %eax\n");
-                builder.append("\tmovl %eax, ").append(dest).append("\n");
+                builder.append("\tmovl ").append(lhs).append(",").append(TEMP_REG_1).append("\n");
+                builder.append("\tmovl ").append(TEMP_REG_1).append(", ").append(dest).append("\n");
             } else {
                 builder.append("\tmovl ").append(lhs).append(", ").append(dest).append("\n");
             }
@@ -220,21 +218,21 @@ public class CodeGenerator {
 
         if (operation.equals("imull")){ // imull requires 2 regs
             if (isMemory(rhs) || isMemory(dest)){
-                builder.append("\tmovl ").append(dest).append(", %eax\n");
+                builder.append("\tmovl ").append(dest).append(", ").append(TEMP_REG_1).append("\n");
                 if (isMemory(rhs)) {
-                    builder.append("\tmovl ").append(rhs).append(", %ecx\n");
-                    builder.append("\timull %ecx, %eax\n");
+                    builder.append("\tmovl ").append(rhs).append(", ").append(TEMP_REG_2).append("\n");
+                    builder.append("\timull ").append(TEMP_REG_2).append(", ").append(TEMP_REG_1).append("\n");
                 } else {
-                    builder.append("\timull ").append(rhs).append(", %eax\n");
+                    builder.append("\timull ").append(rhs).append(", ").append(TEMP_REG_1).append("\n");
                 }
-                builder.append("\tmovl %eax, ").append(dest).append("\n");
+                builder.append("\tmovl ").append(TEMP_REG_1).append(", ").append(dest).append("\n");
             } else {
                 builder.append("\timull ").append(rhs).append(", ").append(dest).append("\n");
             }
         } else {
             if (isMemory(rhs) && isMemory(dest)) { // eax as medium to avoid mem to mem
-                builder.append("\tmovl ").append(rhs).append(", %eax\n");
-                builder.append("\t").append(operation).append(" %eax, ").append(dest).append("\n");
+                builder.append("\tmovl ").append(rhs).append(", ").append(TEMP_REG_1).append("\n");
+                builder.append("\t").append(operation).append(" ").append(TEMP_REG_1).append(", ").append(dest).append("\n");
             } else {
                 builder.append("\t").append(operation).append(" ").append(rhs).append(", ").append(dest).append("\n");
             }
