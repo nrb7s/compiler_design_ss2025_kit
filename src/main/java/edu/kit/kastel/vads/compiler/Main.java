@@ -36,6 +36,13 @@ public class Main {
             System.exit(7);
             return;
         }
+
+        // error 42 for correct main entry
+        boolean hasValidMain = program.topLevelTrees().stream().anyMatch(f -> f.name().name().equals("main"));
+        if (!hasValidMain) {
+            System.exit(42);
+        }
+
         List<IrGraph> graphs = new ArrayList<>();
         for (FunctionTree function : program.topLevelTrees()) {
             SsaTranslation translation = new SsaTranslation(function, new LocalValueNumbering());
