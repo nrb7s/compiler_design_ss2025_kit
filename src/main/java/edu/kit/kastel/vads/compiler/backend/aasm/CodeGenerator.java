@@ -167,7 +167,7 @@ public class CodeGenerator {
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n");
 
-        if (rawDivisor.contains("-")|| rawDivisor.equals("%edx")) { // is mem to mem or edx will collapse with cdq since cdq -> eax -> edx:eax
+        if (isMemory(rawDivisor) || rawDivisor.equals("%edx")) { // is mem to mem or edx will collapse with cdq since cdq -> eax -> edx:eax
             builder.append("\tmovl ").append(rawDivisor).append(", %ecx\n");
             divisor = "%ecx";
         } else {
@@ -190,7 +190,7 @@ public class CodeGenerator {
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n"); //  sign-extend, ATnT standard
 
-        if (rawDivisor.contains("-")|| rawDivisor.equals("%edx")) {
+        if (isMemory(rawDivisor) || rawDivisor.equals("%edx")) {
             builder.append("\tmovl ").append(rawDivisor).append(", %ecx\n");
             divisor = "%ecx";
         } else {
@@ -208,29 +208,36 @@ public class CodeGenerator {
         String rhs = regAllocate(rightNode, registers, spillOffset);
         String dest = regAllocate(node, registers, spillOffset);
 
-        boolean lhsIsMem = lhs.contains("-");
-        boolean rhsIsMem = rhs.contains("-");
-        boolean destIsMem = dest.contains("-");
-
         if (!dest.equals(lhs)) {
-            if (lhsIsMem && destIsMem) {
+            if (isMemory(lhs) && isMemory(dest)) {
                 // mem to mem move, use eax as medium
                 builder.append("\tmovl ").append(lhs).append(", %eax\n");
                 builder.append("\tmovl %eax, ").append(dest).append("\n");
             } else {
-                builder.append("\tmovl ")
-                        .append(lhs)
-                        .append(", ")
-                        .append(dest)
-                        .append("\n");
+                builder.append("\tmovl ").append(lhs).append(", ").append(dest).append("\n");
             }
         }
 
-        if (rhsIsMem && destIsMem) { // eax as medium to avoid mem to mem
-            builder.append("\tmovl ").append(rhs).append(", %eax\n");
-            builder.append("\t").append(operation).append(" %eax, ").append(dest).append("\n");
+        if (operation.equals("imull")){ // imull requires 2 regs
+            if (isMemory(rhs) || isMemory(dest)){
+                builder.append("\tmovl ").append(dest).append(", %eax\n");
+                if (isMemory(rhs)) {
+                    builder.append("\tmovl ").append(rhs).append(", %ecx\n");
+                    builder.append("\timull %ecx, %eax\n");
+                } else {
+                    builder.append("\timull ").append(rhs).append(", %eax\n");
+                }
+                builder.append("\tmovl %eax, ").append(dest).append("\n");
+            } else {
+                builder.append("\timull ").append(rhs).append(", ").append(dest).append("\n");
+            }
         } else {
-            builder.append("\t").append(operation).append(" ").append(rhs).append(", ").append(dest).append("\n");
+            if (isMemory(rhs) && isMemory(dest)) { // eax as medium to avoid mem to mem
+                builder.append("\tmovl ").append(rhs).append(", %eax\n");
+                builder.append("\t").append(operation).append(" %eax, ").append(dest).append("\n");
+            } else {
+                builder.append("\t").append(operation).append(" ").append(rhs).append(", ").append(dest).append("\n");
+            }
         }
     }
 
@@ -255,5 +262,9 @@ public class CodeGenerator {
             .append(registers.get(predecessorSkipProj(node, BinaryOperationNode.LEFT)))
             .append(" ")
             .append(registers.get(predecessorSkipProj(node, BinaryOperationNode.RIGHT)));
+    }
+
+    private static boolean isMemory(String s){
+        return s.contains("(%");
     }
 }

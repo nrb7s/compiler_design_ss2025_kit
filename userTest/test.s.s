@@ -4,17 +4,25 @@
 main:
 	push %rbp
 	mov %rsp, %rbp
-	movl $3, %eax
-	movl $0, %ebx
-	movl $2, %ecx
-	movl %ebx, %edx
-	subl %ecx, %edx
+	subl $8, %esp
+	movl $6, %eax
+	movl $2, %ebx
 	movl %eax, %eax
 	cdq
-	movl %edx, %ecx
-	idivl %ecx
-	movl %edx, %esi
-	movl %esi, %eax
+	idivl %ebx
+	movl %eax, %ecx
+	movl $3, %edx
+	movl %ebx, %esi
+	addl %edx, %esi
+	movl $4, %edi
+	movl %esi, -4(%rbp)
+	movl -4(%rbp), %eax
+	imull %edi, %eax
+	movl %eax, -4(%rbp)
+	movl -4(%rbp), %eax
+	movl %eax, -8(%rbp)
+	subl %ecx, -8(%rbp)
+	movl -8(%rbp), %eax
 	mov %rbp, %rsp
 	pop %rbp
 	ret
