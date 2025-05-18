@@ -165,6 +165,12 @@ public class CodeGenerator {
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n");
+
+        if (divisor.contains("-")) { // is in mem
+            builder.append("\tmovl ").append(divisor).append(", %ecx\n");
+            divisor = "%ecx";
+        }
+
         builder.append("\tidivl ").append(divisor).append("\n");
         builder.append("\tmovl %eax, ").append(dest).append("\n"); // result
     }
@@ -179,6 +185,11 @@ public class CodeGenerator {
 
         builder.append("\tmovl ").append(dividend).append(", %eax\n");
         builder.append("\tcdq\n"); //  sign-extend, ATnT standard
+
+        if (divisor.contains("-")) {
+            builder.append("\tmovl ").append(divisor).append(", %ecx\n");
+            divisor = "%ecx";
+        }
         builder.append("\tidivl ").append(divisor).append("\n");
         builder.append("\tmovl %edx, ").append(dest).append("\n"); // result, notice edx here
     }
@@ -192,6 +203,7 @@ public class CodeGenerator {
         String dest = regAllocate(node, registers, spillOffset);
 
         boolean lhsIsMem = lhs.contains("-");
+        boolean rhsIsMem = rhs.contains("-");
         boolean destIsMem = dest.contains("-");
 
         if (!dest.equals(lhs)) {
@@ -208,13 +220,12 @@ public class CodeGenerator {
             }
         }
 
-        builder.append("\t")
-                .append(operation)
-                .append(" ")
-                .append(rhs)
-                .append(", ")
-                .append(dest)
-                .append("\n");
+        if (rhsIsMem && destIsMem) { // eax as medium to avoid mem to mem
+            builder.append("\tmovl ").append(rhs).append(", %eax\n");
+            builder.append("\t").append(operation).append(" %eax, ").append(dest).append("\n");
+        } else {
+            builder.append("\t").append(operation).append(" ").append(rhs).append(", ").append(dest).append("\n");
+        }
     }
 
     private static String regAllocate(Node node, Map<Node, Register> registers, Map<Integer,Integer> spillOffset) {
