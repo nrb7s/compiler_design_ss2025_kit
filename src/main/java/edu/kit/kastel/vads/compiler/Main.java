@@ -38,12 +38,18 @@ public class Main {
         }
 
         // main() check
+        /*
+        for (FunctionTree f : program.topLevelTrees()) {
+            System.out.println("Function name: " + f.name().name());
+            System.out.println("Return type: " + f.returnType());
+        }
+         */
         boolean hasMain = program.topLevelTrees().stream().anyMatch(f ->
-                f.name().name().toString().equals("main") &&
-                        f.returnType().toString().equals("int")
+                f.name().name().asString().equals("main") &&
+                        f.returnType().type().toString().equals("INT")
         );
         if (!hasMain) {
-            System.err.println("Error: `int main()` entry point not found.");
+            // System.err.println("Error: `int main()` entry point not found.");
             System.exit(42);
         }
 
