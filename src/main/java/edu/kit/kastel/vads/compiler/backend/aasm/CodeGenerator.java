@@ -64,8 +64,8 @@ public class CodeGenerator {
             // Prologue and reserve stack for spilling
             builder.append("\t.globl ").append(graph.name()).append("\n");
             builder.append(graph.name()).append(":\n");
-            builder.append("\tpushl %ebp\n");
-            builder.append("\tmovl %esp, %ebp\n");
+            // builder.append("\tpushl %ebp\n");
+            // builder.append("\tmovl %esp, %ebp\n");
             if (totalSpillBytes > 0) {
                 builder.append("\tsubl $")
                         .append(totalSpillBytes)
@@ -76,10 +76,8 @@ public class CodeGenerator {
 
             // Epilogue
             // builder.append("\tpopp %rbp\n");
-            // builder.append("\tleave\n") // leave = movl %ebp, %esp then popl %ebp
-            builder.append("\tmovl %ebp, %esp\n")
-                    .append("\tpopl %ebp\n")
-                    .append("\tret\n\n");
+            // builder.append("\tleave\n"); // leave = movl %ebp, %esp then popl %ebp
+            builder.append("\tret\n\n");
         }
         return builder.toString();
     }
