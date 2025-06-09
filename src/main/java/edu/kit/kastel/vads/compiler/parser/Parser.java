@@ -1,5 +1,6 @@
 package edu.kit.kastel.vads.compiler.parser;
 
+import com.sun.source.tree.*;
 import edu.kit.kastel.vads.compiler.lexer.Identifier;
 import edu.kit.kastel.vads.compiler.lexer.Keyword;
 import edu.kit.kastel.vads.compiler.lexer.KeywordType;
@@ -10,22 +11,18 @@ import edu.kit.kastel.vads.compiler.lexer.Separator;
 import edu.kit.kastel.vads.compiler.lexer.Separator.SeparatorType;
 import edu.kit.kastel.vads.compiler.Span;
 import edu.kit.kastel.vads.compiler.lexer.Token;
+import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
-import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
+import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ExpressionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LValueTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ForLoopTree;
+import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
+import edu.kit.kastel.vads.compiler.parser.ast.WhileLoopTree;
 import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
 import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
-import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.type.BasicType;
 
@@ -70,17 +67,94 @@ public class Parser {
         return new BlockTree(statements, bodyOpen.span().merge(bodyClose.span()));
     }
 
-    private StatementTree parseStatement() {
-        StatementTree statement;
-        if (this.tokenSource.peek().isKeyword(KeywordType.INT)) {
-            statement = parseDeclaration();
-        } else if (this.tokenSource.peek().isKeyword(KeywordType.RETURN)) {
-            statement = parseReturn();
-        } else {
-            statement = parseSimple();
+    private StatementTree parseStatement() { // update for control structure
+        if (tokenSource.peek().isKeyword(KeywordType.INT)) {
+            StatementTree decl = parseDeclaration();
+            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+            return decl;
         }
-        this.tokenSource.expectSeparator(SeparatorType.SEMICOLON);
-        return statement;
+        else if (tokenSource.peek().isKeyword(KeywordType.RETURN)) {
+            StatementTree ret = parseReturn();
+            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+            return ret;
+        }
+        else if (tokenSource.peek().isKeyword(KeywordType.IF)) {
+            return parseIf();
+        }
+        else if (tokenSource.peek().isKeyword(KeywordType.WHILE)) {
+            return parseWhile();
+        }
+        else if (tokenSource.peek().isKeyword(KeywordType.FOR)) {
+            return parseFor();
+        }
+        else if (tokenSource.peek().isKeyword(KeywordType.CONTINUE)) {
+            tokenSource.expectKeyword(KeywordType.CONTINUE);
+            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+            return new ContinueTree();
+        }
+        else if (tokenSource.peek().isKeyword(KeywordType.BREAK)) {
+            tokenSource.expectKeyword(KeywordType.BREAK);
+            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+            return new BreakTree();
+        }
+        else if (tokenSource.peek().isSeparator(SeparatorType.BRACE_OPEN)) {
+            return parseBlock();
+        }
+        else {
+            StatementTree statement = parseSimple();
+            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+            return statement;
+        }
+    }
+
+    private StatementTree parseIf() {
+        tokenSource.expectKeyword(KeywordType.IF);
+        tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
+        ExpressionTree condition = parseExpression();
+        tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+        StatementTree thenBranch = parseStatement();
+        StatementTree elseBranch = null;
+        if (tokenSource.peek().isKeyword(KeywordType.ELSE)) {
+            tokenSource.expectKeyword(KeywordType.ELSE);
+            elseBranch = parseStatement();
+        }
+        return new IfTree(condition, thenBranch, elseBranch);
+    }
+
+    private StatementTree parseWhile() {
+        tokenSource.expectKeyword(KeywordType.WHILE);
+        tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
+        ExpressionTree condition = parseExpression();
+        tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+        StatementTree body = parseStatement();
+        return new WhileLoopTree(condition, body);
+    }
+
+    private StatementTree parseFor() {
+        tokenSource.expectKeyword(KeywordType.FOR);
+        tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
+
+        StatementTree init = null;
+        if (!tokenSource.peek().isSeparator(SeparatorType.SEMICOLON)) {
+            init = parseStatement();
+        } else {
+            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+        }
+
+        ExpressionTree condition = null;
+        if  (!tokenSource.peek().isSeparator(SeparatorType.SEMICOLON)) {
+            condition = parseExpression();
+        }
+        tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+
+        StatementTree step = null;
+        if (!tokenSource.peek().isSeparator(SeparatorType.PAREN_CLOSE)) {
+            step = parseStatement();
+        }
+        tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+
+        StatementTree body = parseStatement();
+        return new ForLoopTree(init, condition, step, body);
     }
 
     private StatementTree parseDeclaration() {

@@ -6,6 +6,11 @@ public sealed interface Span {
 
     Span merge(Span later);
 
+    Span DUMMY = new SimpleSpan(
+            new Position.SimplePosition(0, 0),
+            new Position.SimplePosition(0, 0)
+    );
+
     record SimpleSpan(Position start, Position end) implements Span {
         @Override
         public Span merge(Span later) {
