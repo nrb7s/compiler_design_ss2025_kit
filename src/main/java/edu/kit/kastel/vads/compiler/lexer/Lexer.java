@@ -41,8 +41,12 @@ public class Lexer {
             case '*' -> singleOrAssign(OperatorType.MUL, OperatorType.ASSIGN_MUL);
             case '/' -> singleOrAssign(OperatorType.DIV, OperatorType.ASSIGN_DIV);
             case '%' -> singleOrAssign(OperatorType.MOD, OperatorType.ASSIGN_MOD);
-            case '=' -> new Operator(OperatorType.ASSIGN, buildSpan(1));
+            // case '=' -> new Operator(OperatorType.ASSIGN, buildSpan(1));
             default -> {
+                Token opToken = matchOperator();
+                if (opToken != null) {
+                    yield opToken;
+                }
                 if (isIdentifierChar(peek())) {
                     if (isNumeric(peek())) {
                         yield lexNumber();
@@ -54,6 +58,38 @@ public class Lexer {
         };
 
         return Optional.of(t);
+    }
+
+    private boolean match(String s) {
+        return this.source.startsWith(s, this.pos);
+    }
+
+    private @Nullable Token matchOperator() {
+        if (match("<<=")) return new Operator(Operator.OperatorType.ASSIGN_LSHIFT, buildSpan(3));
+        if (match(">>=")) return new Operator(Operator.OperatorType.ASSIGN_RSHIFT, buildSpan(3));
+        if (match("==")) return new Operator(Operator.OperatorType.EQ, buildSpan(2));
+        if (match("!=")) return new Operator(Operator.OperatorType.NEQ, buildSpan(2));
+        if (match("<=")) return new Operator(Operator.OperatorType.LE, buildSpan(2));
+        if (match(">=")) return new Operator(Operator.OperatorType.GE, buildSpan(2));
+        if (match("&&")) return new Operator(Operator.OperatorType.ANDAND, buildSpan(2));
+        if (match("||")) return new Operator(Operator.OperatorType.OROR, buildSpan(2));
+        if (match("&=")) return new Operator(Operator.OperatorType.ASSIGN_AND, buildSpan(2));
+        if (match("|=")) return new Operator(Operator.OperatorType.ASSIGN_OR, buildSpan(2));
+        if (match("^=")) return new Operator(Operator.OperatorType.ASSIGN_XOR, buildSpan(2));
+        if (match("<<")) return new Operator(Operator.OperatorType.LSHIFT, buildSpan(2));
+        if (match(">>")) return new Operator(Operator.OperatorType.RSHIFT, buildSpan(2));
+
+        if (match("=")) return new Operator(Operator.OperatorType.ASSIGN, buildSpan(1));
+        if (match("<")) return new Operator(Operator.OperatorType.LT, buildSpan(1));
+        if (match(">")) return new Operator(Operator.OperatorType.GT, buildSpan(1));
+        if (match("&")) return new Operator(Operator.OperatorType.AND, buildSpan(1));
+        if (match("|")) return new Operator(Operator.OperatorType.OR, buildSpan(1));
+        if (match("^")) return new Operator(Operator.OperatorType.XOR, buildSpan(1));
+        if (match("~")) return new Operator(Operator.OperatorType.NOT, buildSpan(1));
+        if (match("?")) return new Operator(Operator.OperatorType.QUESTION, buildSpan(1));
+        if (match(":")) return new Operator(Operator.OperatorType.COLON, buildSpan(1));
+
+        return null;
     }
 
     private @Nullable ErrorToken skipWhitespace() {
