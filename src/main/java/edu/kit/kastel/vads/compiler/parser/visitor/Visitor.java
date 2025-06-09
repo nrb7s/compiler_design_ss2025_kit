@@ -40,4 +40,10 @@ public interface Visitor<T, R> {
     R visit(BreakTree breakTree, T data);
 
     R visit(ContinueTree continueTree, T data);
+
+    R visit(ConditionalTree conditionalTree, T data);
+
+    R visit(LogicalNotTree logicalNotTree, T data);
+
+    R visit(BitwiseNotTree bitwiseNotTree, T data);
 }

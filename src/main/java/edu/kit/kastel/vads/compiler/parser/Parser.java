@@ -31,10 +31,18 @@ import java.util.List;
 
 public class Parser {
     private final TokenSource tokenSource;
+    private Token lastConsumed;
 
     public Parser(TokenSource tokenSource) {
         this.tokenSource = tokenSource;
     }
+
+    private Token consume() {
+        lastConsumed = tokenSource.consume();
+        return lastConsumed;
+    }
+
+    private Token previous() { return lastConsumed; }
 
     public ProgramTree parseProgram() {
         ProgramTree programTree = new ProgramTree(List.of(parseFunction()));
@@ -205,6 +213,158 @@ public class Parser {
         return new ReturnTree(expression, ret.span().start());
     }
 
+    // update for L2
+    private ExpressionTree parseExpression() {
+        return parseConditional();
+    }
+
+    private ExpressionTree parseConditional() {
+        ExpressionTree condition = parseLogicalOr();
+        if (matchOperator(OperatorType.QUESTION)) {
+            ExpressionTree thenExpr = parseExpression();
+            expectOperator(OperatorType.COLON);
+            ExpressionTree elseExpr = parseExpression();
+            return new ConditionalTree(condition, thenExpr, elseExpr);
+        }
+        return condition;
+    }
+
+    private ExpressionTree parseLogicalOr() {
+        ExpressionTree lhs = parseLogicalAnd();
+        while (matchOperator(OperatorType.OROR)) {
+            lhs = new BinaryOperationTree(lhs, parseLogicalAnd(), OperatorType.OROR);
+        }
+        return lhs;
+    }
+
+    private ExpressionTree parseLogicalAnd() {
+        ExpressionTree lhs = parseBitwiseOr();
+        while (matchOperator(OperatorType.ANDAND)) {
+            lhs = new BinaryOperationTree(lhs, parseBitwiseOr(), OperatorType.ANDAND);
+        }
+        return lhs;
+    }
+
+    private ExpressionTree parseBitwiseOr() {
+        ExpressionTree lhs = parseBitwiseXor();
+        while (matchOperator(OperatorType.OR)) {
+            lhs = new BinaryOperationTree(lhs, parseBitwiseXor(), OperatorType.OR);
+        }
+        return lhs;
+    }
+
+    private ExpressionTree parseBitwiseXor() {
+        ExpressionTree lhs = parseBitwiseAnd();
+        while (matchOperator(OperatorType.XOR)) {
+            lhs = new BinaryOperationTree(lhs, parseBitwiseAnd(), OperatorType.XOR);
+        }
+        return lhs;
+    }
+
+    private ExpressionTree parseBitwiseAnd() {
+        ExpressionTree lhs = parseEquality();
+        while (matchOperator(OperatorType.AND)) {
+            lhs = new BinaryOperationTree(lhs, parseEquality(), OperatorType.AND);
+        }
+        return lhs;
+    }
+
+    private ExpressionTree parseEquality() {
+        ExpressionTree lhs = parseRelational();
+        while (true) {
+            if (matchOperator(OperatorType.EQ)) {
+                lhs = new BinaryOperationTree(lhs, parseRelational(), OperatorType.EQ);
+            } else if (matchOperator(OperatorType.NEQ)) {
+                lhs = new BinaryOperationTree(lhs, parseRelational(), OperatorType.NEQ);
+            } else {
+                return lhs;
+            }
+        }
+    }
+
+    private ExpressionTree parseRelational() {
+        ExpressionTree lhs = parseShift();
+        while (true) {
+            if (matchOperator(OperatorType.LT)) {
+                lhs = new BinaryOperationTree(lhs, parseShift(), OperatorType.LT);
+            } else if (matchOperator(OperatorType.GT)) {
+                lhs = new BinaryOperationTree(lhs, parseShift(), OperatorType.GT);
+            } else if (matchOperator(OperatorType.LE)) {
+                lhs = new BinaryOperationTree(lhs, parseShift(), OperatorType.LE);
+            } else if (matchOperator(OperatorType.GE)) {
+                lhs = new BinaryOperationTree(lhs, parseShift(), OperatorType.GE);
+            } else {
+                return lhs;
+            }
+        }
+    }
+
+    private ExpressionTree parseShift() {
+        ExpressionTree lhs = parseAdditive();
+        while (true) {
+            if (matchOperator(OperatorType.LSHIFT)) {
+                lhs = new BinaryOperationTree(lhs, parseAdditive(), OperatorType.LSHIFT);
+            } else if (matchOperator(OperatorType.RSHIFT)) {
+                lhs = new BinaryOperationTree(lhs, parseAdditive(), OperatorType.RSHIFT);
+            } else {
+                return lhs;
+            }
+        }
+    }
+
+    private ExpressionTree parseAdditive() {
+        ExpressionTree lhs = parseMultiplicative();
+        while (true) {
+            if (matchOperator(OperatorType.PLUS)) {
+                lhs = new BinaryOperationTree(lhs, parseMultiplicative(), OperatorType.PLUS);
+            } else if (matchOperator(OperatorType.MINUS)) {
+                lhs = new BinaryOperationTree(lhs, parseMultiplicative(), OperatorType.MINUS);
+            } else {
+                return lhs;
+            }
+        }
+    }
+
+    private ExpressionTree parseMultiplicative() {
+        ExpressionTree lhs = parseUnary();
+        while (true) {
+            if (matchOperator(OperatorType.MUL)) {
+                lhs = new BinaryOperationTree(lhs, parseUnary(), OperatorType.MUL);
+            } else if (matchOperator(OperatorType.DIV)) {
+                lhs = new BinaryOperationTree(lhs, parseUnary(), OperatorType.DIV);
+            } else if (matchOperator(OperatorType.MOD)) {
+                lhs = new BinaryOperationTree(lhs, parseUnary(), OperatorType.MOD);
+            } else {
+                return lhs;
+            }
+        }
+    }
+
+    private ExpressionTree parseUnary() {
+        if (matchOperator(OperatorType.MINUS)) {
+            return new NegateTree(parseUnary(), previous().span());
+        } else if (matchOperator(OperatorType.NOT)) {
+            return new LogicalNotTree(parseUnary());
+        } else if (matchOperator(OperatorType.BITWISE_NOT)) {
+            return new BitwiseNotTree(parseUnary());
+        }
+        return parseFactor();
+    }
+
+    private boolean matchOperator(OperatorType type) {
+        if (tokenSource.peek() instanceof Operator op && op.type() == type) {
+            consume(); // encapsulated tokenSource.consume()
+            return true;
+        }
+        return false;
+    }
+
+    private void expectOperator(OperatorType type) {
+        if (!matchOperator(type)) {
+            throw new ParseException("Expected operator " + type);
+        }
+    }
+    /*
     private ExpressionTree parseExpression() {
         ExpressionTree lhs = parseTerm();
         while (true) {
@@ -217,6 +377,7 @@ public class Parser {
             }
         }
     }
+     */
 
     private ExpressionTree parseTerm() {
         ExpressionTree lhs = parseFactor();
