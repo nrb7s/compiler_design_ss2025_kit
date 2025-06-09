@@ -2,11 +2,12 @@ package edu.kit.kastel.vads.compiler.parser.ast;
 
 import edu.kit.kastel.vads.compiler.Span;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
+import org.jspecify.annotations.Nullable;
 
 public record ForLoopTree(
-        StatementTree init,
-        ExpressionTree condition,
-        StatementTree step,
+        @Nullable StatementTree init,
+        @Nullable ExpressionTree condition,
+        @Nullable StatementTree step,
         StatementTree body
 ) implements StatementTree {
     @Override

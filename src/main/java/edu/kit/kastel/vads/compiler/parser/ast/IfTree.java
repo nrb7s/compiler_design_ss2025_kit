@@ -2,11 +2,12 @@ package edu.kit.kastel.vads.compiler.parser.ast;
 
 import edu.kit.kastel.vads.compiler.Span;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
+import org.jspecify.annotations.Nullable;
 
 public record IfTree(
         ExpressionTree condition,
         StatementTree thenBranch,
-        StatementTree elseBranch) implements StatementTree {
+        @Nullable StatementTree elseBranch) implements StatementTree {
     @Override
     public Span span() {
         if (elseBranch != null) {
