@@ -1,18 +1,8 @@
 package edu.kit.kastel.vads.compiler.ir;
 
-import edu.kit.kastel.vads.compiler.ir.node.AddNode;
-import edu.kit.kastel.vads.compiler.ir.node.Block;
-import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
-import edu.kit.kastel.vads.compiler.ir.node.DivNode;
-import edu.kit.kastel.vads.compiler.ir.node.ModNode;
-import edu.kit.kastel.vads.compiler.ir.node.MulNode;
-import edu.kit.kastel.vads.compiler.ir.node.Node;
-import edu.kit.kastel.vads.compiler.ir.node.Phi;
-import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
-import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
-import edu.kit.kastel.vads.compiler.ir.node.StartNode;
-import edu.kit.kastel.vads.compiler.ir.node.SubNode;
+import edu.kit.kastel.vads.compiler.ir.node.*;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
+import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 
 import java.util.HashMap;
@@ -189,4 +179,175 @@ class GraphConstructor {
         return tryRemoveTrivialPhi(phi);
     }
 
+    // L2: AST -> IR
+    public static IrGraph build(FunctionTree function) {
+        Optimizer optimizer = new Optimizer() {
+            @Override
+            public Node transform(Node n) { return n; }
+        };
+        GraphConstructor gc = new GraphConstructor(optimizer, function.name().name().asString());
+        gc.buildBody(function.body());
+        return gc.graph();
+    }
+
+    private void buildBody(StatementTree stmt) {
+        if (stmt instanceof BlockTree block) {
+            for (StatementTree s : block.statements()) {
+                buildBody(s);
+            }
+        } else if (stmt instanceof DeclarationTree decl) {
+            // Do Nothing, just SSA setup
+        } else if (stmt instanceof AssignmentTree assign) {
+            Node value = buildExpr(assign.expression());
+            Name var = extractName(assign.lValue());
+            // +=，-=，*=，/=，%=
+            switch (assign.operator().type()) {
+                case ASSIGN -> writeVariable(var, currentBlock(), value);
+                case ASSIGN_PLUS -> writeVariable(var, currentBlock(),
+                        newAdd(readVariable(var, currentBlock()), value));
+                case ASSIGN_MINUS -> writeVariable(var, currentBlock(),
+                        newSub(readVariable(var, currentBlock()), value));
+                case ASSIGN_MUL -> writeVariable(var, currentBlock(),
+                        newMul(readVariable(var, currentBlock()), value));
+                case ASSIGN_DIV -> writeVariable(var, currentBlock(),
+                        newDiv(readVariable(var, currentBlock()), value));
+                case ASSIGN_MOD -> writeVariable(var, currentBlock(),
+                        newMod(readVariable(var, currentBlock()), value));
+                default -> throw new UnsupportedOperationException("Unsupported assignment operator");
+            }
+        } else if (stmt instanceof IfTree ifTree) {
+            buildIf(ifTree);
+        } else if (stmt instanceof WhileLoopTree whileTree) {
+            buildWhile(whileTree);
+        } else if (stmt instanceof ReturnTree ret) {
+            Node value = buildExpr(ret.expression());
+            Node retNode = newReturn(value);
+            graph.registerSuccessor(currentBlock, retNode);
+            // No more code should be generated in this block after return
+            currentBlock = null;
+        } else if (stmt instanceof ContinueTree || stmt instanceof BreakTree) {
+            // Do nothing, handle in codegenstage
+        } else {
+            throw new UnsupportedOperationException("Unknown StatementTree: " + stmt);
+        }
+    }
+
+    private void buildIf(IfTree ifTree) {
+        Block thenBlock = new Block(graph);
+        Block afterBlock = new Block(graph);
+        Block elseBlock = ifTree.elseBranch() != null ? new Block(graph) : afterBlock;
+
+        Node condValue = buildExpr(ifTree.condition());
+        // Condition jump: If condValue != 0 goto thenBlock else elseBlock
+        Node branchNode = new CondJumpNode(currentBlock, condValue, thenBlock, elseBlock);
+        graph.registerSuccessor(currentBlock, branchNode);
+
+        // Then branch
+        currentBlock = thenBlock;
+        buildBody(ifTree.thenBranch());
+        if (currentBlock != null) { // block might be null if ended by return
+            graph.registerSuccessor(currentBlock, afterBlock);
+        }
+
+        // Else branch
+        if (ifTree.elseBranch() != null) {
+            currentBlock = elseBlock;
+            buildBody(ifTree.elseBranch());
+            if (currentBlock != null) {
+                graph.registerSuccessor(currentBlock, afterBlock);
+            }
+        }
+        // Continue in afterBlock
+        currentBlock = afterBlock;
+    }
+
+    private void buildWhile(WhileLoopTree whileTree) {
+        Block condBlock = new Block(graph);
+        Block bodyBlock = new Block(graph);
+        Block afterBlock = new Block(graph);
+
+        // Jump to cond block
+        graph.registerSuccessor(currentBlock, condBlock);
+        currentBlock = condBlock;
+
+        Node condValue = buildExpr(whileTree.condition());
+        Node condJump = new CondJumpNode(currentBlock, condValue, bodyBlock, afterBlock);
+        graph.registerSuccessor(currentBlock, condJump);
+
+        // Body
+        currentBlock = bodyBlock;
+        buildBody(whileTree.body());
+        if (currentBlock != null) {
+            // Loop back to cond block
+            graph.registerSuccessor(currentBlock, condBlock);
+        }
+        // Continue in after block
+        currentBlock = afterBlock;
+    }
+
+    private Node buildExpr(ExpressionTree expr) {
+        switch (expr) {
+            case LiteralTree lit -> {
+                // int only
+                int value = Integer.parseInt(lit.value());
+                return newConstInt(value);
+            }
+            case IdentExpressionTree ident -> {
+                Name name = ident.name().name(); // the name of NameTree
+
+                return readVariable(name, currentBlock()); // the name of NameTree
+            }
+            case NegateTree neg -> {
+                Node operand = buildExpr(neg.expression());
+                return newSub(newConstInt(0), operand);
+            }
+            case BinaryOperationTree bin -> {
+                Node left = buildExpr(bin.lhs());
+                Node right = buildExpr(bin.rhs());
+                return switch (bin.operatorType()) {
+                    case PLUS -> newAdd(left, right);
+                    case MINUS -> newSub(left, right);
+                    case MUL -> newMul(left, right);
+                    case DIV -> newDiv(left, right);
+                    case MOD -> newMod(left, right);
+                    default -> throw new UnsupportedOperationException("Unknown binary op: " + bin.operatorType());
+                };
+            }
+            case ConditionalTree cond -> {
+                // SSA: Build blocks for then/else, then merge with a Phi node in afterBlock
+                Block thenBlock = new Block(graph);
+                Block elseBlock = new Block(graph);
+                Block afterBlock = new Block(graph);
+
+                Node condValue = buildExpr(cond.condition());
+                Node branchNode = new CondJumpNode(currentBlock, condValue, thenBlock, elseBlock);
+                graph.registerSuccessor(currentBlock, branchNode);
+
+                // Then branch
+                currentBlock = thenBlock;
+                Node thenResult = buildExpr(cond.thenExpr());
+                graph.registerSuccessor(currentBlock, afterBlock);
+
+                // Else branch
+                currentBlock = elseBlock;
+                Node elseResult = buildExpr(cond.elseExpr());
+                graph.registerSuccessor(currentBlock, afterBlock);
+
+                // Merge with Phi
+                currentBlock = afterBlock;
+                Phi phi = new Phi(currentBlock);
+                phi.appendOperand(thenResult);
+                phi.appendOperand(elseResult);
+                return phi;
+            }
+            case null, default -> throw new UnsupportedOperationException("Unknown ExpressionTree: " + expr);
+        }
+    }
+
+    private Name extractName(LValueTree lvalue) {
+        if (lvalue instanceof LValueIdentTree idTree) {
+            return idTree.name().name();
+        }
+        throw new UnsupportedOperationException("Only simple lvalue supported");
+    }
 }
