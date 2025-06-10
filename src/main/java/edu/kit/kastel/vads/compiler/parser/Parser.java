@@ -1,16 +1,10 @@
 package edu.kit.kastel.vads.compiler.parser;
 
 import com.sun.source.tree.*;
-import edu.kit.kastel.vads.compiler.lexer.Identifier;
-import edu.kit.kastel.vads.compiler.lexer.Keyword;
-import edu.kit.kastel.vads.compiler.lexer.KeywordType;
-import edu.kit.kastel.vads.compiler.lexer.NumberLiteral;
-import edu.kit.kastel.vads.compiler.lexer.Operator;
+import edu.kit.kastel.vads.compiler.lexer.*;
 import edu.kit.kastel.vads.compiler.lexer.Operator.OperatorType;
-import edu.kit.kastel.vads.compiler.lexer.Separator;
 import edu.kit.kastel.vads.compiler.lexer.Separator.SeparatorType;
 import edu.kit.kastel.vads.compiler.Span;
-import edu.kit.kastel.vads.compiler.lexer.Token;
 import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
@@ -31,7 +25,7 @@ import java.util.List;
 
 public class Parser {
     private final TokenSource tokenSource;
-    private Token lastConsumed;
+    private Token lastConsumed = new ErrorToken("uninitialized", Span.DUMMY);
 
     public Parser(TokenSource tokenSource) {
         this.tokenSource = tokenSource;
