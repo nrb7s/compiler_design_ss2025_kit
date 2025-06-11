@@ -2,19 +2,7 @@ package edu.kit.kastel.vads.compiler.backend.aasm;
 
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
-import edu.kit.kastel.vads.compiler.ir.node.AddNode;
-import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
-import edu.kit.kastel.vads.compiler.ir.node.Block;
-import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
-import edu.kit.kastel.vads.compiler.ir.node.DivNode;
-import edu.kit.kastel.vads.compiler.ir.node.ModNode;
-import edu.kit.kastel.vads.compiler.ir.node.MulNode;
-import edu.kit.kastel.vads.compiler.ir.node.Node;
-import edu.kit.kastel.vads.compiler.ir.node.Phi;
-import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
-import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
-import edu.kit.kastel.vads.compiler.ir.node.StartNode;
-import edu.kit.kastel.vads.compiler.ir.node.SubNode;
+import edu.kit.kastel.vads.compiler.ir.node.*;
 
 import java.util.*;
 
@@ -28,20 +16,6 @@ public class CodeGenerator {
     };
     private static final String TEMP_REG_1 = "%esi";
     private static final String TEMP_REG_2 = "%edi";
-
-    public String generateCode(List<IrGraph> program) {
-        StringBuilder builder = new StringBuilder();
-        for (IrGraph graph : program) {
-            AasmRegisterAllocator allocator = new AasmRegisterAllocator();
-            Map<Node, Register> registers = allocator.allocateRegisters(graph);
-            builder.append("function ")
-                .append(graph.name())
-                .append(" {\n");
-            generateForGraph(graph, builder, registers);
-            builder.append("}");
-        }
-        return builder.toString();
-    }
 
     public String generateAssembly(List<IrGraph> program) { // Using AT&T style instead of Intel style to meet the requirement of gcc
         StringBuilder builder = new StringBuilder();
@@ -105,6 +79,24 @@ public class CodeGenerator {
             case MulNode mul -> binaryAsm(builder, registers, mul, "imull", spillOffset);  // 32-bit, imulq for 64-bit
             case DivNode div -> divide(builder, registers, div, spillOffset);
             case ModNode mod -> mod(builder, registers, mod, spillOffset);
+            // L2
+            case CondJumpNode cj -> {
+                String condReg = regAllocate(cj.condition(), registers, spillOffset);
+                builder.append("\tcmpl $0, ").append(condReg).append("\n");
+                builder.append("\tjne L").append(cj.trueTarget().getId()).append("\n");
+                builder.append("\tjmp L").append(cj.falseTarget().getId()).append("\n");
+            }
+            case BitwiseNotNode bn -> {
+                String opReg = regAllocate(bn.operand(), registers, spillOffset);
+                builder.append("\tnotl ").append(opReg).append("\n");
+            }
+            case LogicalNotNode ln -> {
+                String opReg = regAllocate(ln.operand(), registers, spillOffset);
+                builder.append("\tcmpl $0, ").append(opReg).append("\n");
+                builder.append("\tsete %al\n");
+                builder.append("\tmovzbl %al, ").append(opReg).append("\n");
+            }
+            // L2 ends
             case ReturnNode r -> {
                 Node res = predecessorSkipProj(r, ReturnNode.RESULT);
                 builder.append("\tmovl ")
@@ -123,6 +115,21 @@ public class CodeGenerator {
                 return;
             }
         }
+    }
+
+    /*
+    public String generateCode(List<IrGraph> program) {
+        StringBuilder builder = new StringBuilder();
+        for (IrGraph graph : program) {
+            AasmRegisterAllocator allocator = new AasmRegisterAllocator();
+            Map<Node, Register> registers = allocator.allocateRegisters(graph);
+            builder.append("function ")
+                .append(graph.name())
+                .append(" {\n");
+            generateForGraph(graph, builder, registers);
+            builder.append("}");
+        }
+        return builder.toString();
     }
 
     private void generateForGraph(IrGraph graph, StringBuilder builder, Map<Node, Register> registers) {
@@ -157,6 +164,7 @@ public class CodeGenerator {
         }
         builder.append("\n");
     }
+     */
 
     private static void divide(StringBuilder builder, Map<Node, Register> registers, Node node, Map<Integer,Integer> spillOffset) {
         Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
