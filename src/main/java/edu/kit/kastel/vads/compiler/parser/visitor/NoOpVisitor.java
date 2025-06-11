@@ -112,4 +112,7 @@ public interface NoOpVisitor<T> extends Visitor<T, Unit> {
     default Unit visit(BitwiseNotTree bitwiseNotTree, T data) {
         return Unit.INSTANCE;
     }
+
+    @Override
+    default Unit visit(ExpressionStatementTree expressionStatementTree, T data) { return Unit.INSTANCE; }
 }

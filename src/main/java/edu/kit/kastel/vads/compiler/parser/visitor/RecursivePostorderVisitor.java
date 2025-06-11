@@ -187,4 +187,11 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
         R r = bitwiseNotTree.operand().accept(this, data);
         return this.visitor.visit(bitwiseNotTree, accumulate(data, r));
     }
+
+    @Override
+    public R visit(ExpressionStatementTree exprStmt, T data) {
+        R r = exprStmt.expr().accept(this, data);
+        r = this.visitor.visit(exprStmt, accumulate(data, r));
+        return r;
+    }
 }

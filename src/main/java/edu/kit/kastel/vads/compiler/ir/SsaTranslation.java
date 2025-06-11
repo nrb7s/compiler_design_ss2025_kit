@@ -414,7 +414,11 @@ public class SsaTranslation {
             data.constructor.writeCurrentSideEffect(projSideEffect);
             return data.constructor.newResultProj(divMod);
         }
+
+        @Override
+        public Optional<Node> visit(ExpressionStatementTree exprStmt, SsaTranslation data) {
+            exprStmt.expr().accept(this, data);
+            return NOT_AN_EXPRESSION;
+        }
     }
-
-
 }

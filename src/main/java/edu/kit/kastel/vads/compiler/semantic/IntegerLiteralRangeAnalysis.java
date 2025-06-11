@@ -77,4 +77,10 @@ public class IntegerLiteralRangeAnalysis implements NoOpVisitor<Namespace<Void>>
         bitwiseNotTree.operand().accept(this, data);
         return NoOpVisitor.super.visit(bitwiseNotTree, data);
     }
+
+    @Override
+    public Unit visit(ExpressionStatementTree expressionStatementTree, Namespace<Void> data) {
+        expressionStatementTree.expr().accept(this, data);
+        return NoOpVisitor.super.visit(expressionStatementTree, data);
+    }
 }

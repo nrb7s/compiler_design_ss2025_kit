@@ -10,6 +10,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
 import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
+import edu.kit.kastel.vads.compiler.parser.ast.ExpressionStatementTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ExpressionTree;
 import edu.kit.kastel.vads.compiler.parser.ast.ForLoopTree;
 import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
@@ -138,20 +139,23 @@ public class Parser {
 
         StatementTree init = null;
         if (!tokenSource.peek().isSeparator(SeparatorType.SEMICOLON)) {
-            init = parseStatement();
-        } else {
-            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+            if (tokenSource.peek().isKeyword(KeywordType.INT)) {
+                init = parseDeclaration();
+            } else {
+                init = parseSimple();
+            }
         }
+        tokenSource.expectSeparator(SeparatorType.SEMICOLON);
 
         ExpressionTree condition = null;
-        if  (!tokenSource.peek().isSeparator(SeparatorType.SEMICOLON)) {
+        if (!tokenSource.peek().isSeparator(SeparatorType.SEMICOLON)) {
             condition = parseExpression();
         }
         tokenSource.expectSeparator(SeparatorType.SEMICOLON);
 
         StatementTree step = null;
         if (!tokenSource.peek().isSeparator(SeparatorType.PAREN_CLOSE)) {
-            step = parseStatement();
+            step = new ExpressionStatementTree(parseExpression());
         }
         tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
 

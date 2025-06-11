@@ -46,4 +46,6 @@ public interface Visitor<T, R> {
     R visit(LogicalNotTree logicalNotTree, T data);
 
     R visit(BitwiseNotTree bitwiseNotTree, T data);
+
+    R visit(ExpressionStatementTree expressionStatementTree, T data);
 }
