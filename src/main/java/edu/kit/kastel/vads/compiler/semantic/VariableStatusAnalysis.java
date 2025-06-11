@@ -91,9 +91,8 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
     // L2
     @Override
     public Unit visit(BlockTree blockTree, Namespace<VariableStatus> data) {
-        Namespace<VariableStatus> scope = data.fork();
         for (StatementTree statement : blockTree.statements()) {
-            statement.accept(this, scope);
+            statement.accept(this, data);
         }
         return NoOpVisitor.super.visit(blockTree, data);
     }
