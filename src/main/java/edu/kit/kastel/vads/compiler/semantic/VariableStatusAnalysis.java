@@ -90,15 +90,20 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
 
     // L2
     @Override
+    public Unit visit(BlockTree blockTree, Namespace<VariableStatus> data) {
+        Namespace<VariableStatus> scope = data.fork();
+        for (StatementTree statement : blockTree.statements()) {
+            statement.accept(this, scope);
+        }
+        return NoOpVisitor.super.visit(blockTree, data);
+    }
+
+    @Override
     public Unit visit(IfTree ifTree, Namespace<VariableStatus> data) {
         ifTree.condition().accept(this, data);
-        data.push();
-        ifTree.thenBranch().accept(this, data);
-        data.pop();
+        ifTree.thenBranch().accept(this, data.fork());
         if (ifTree.elseBranch() != null) {
-            data.push();
-            ifTree.elseBranch().accept(this, data);
-            data.pop();
+            ifTree.elseBranch().accept(this, data.fork());
         }
         return NoOpVisitor.super.visit(ifTree, data);
     }
@@ -106,20 +111,23 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
     @Override
     public Unit visit(WhileLoopTree whileLoopTree, Namespace<VariableStatus> data) {
         whileLoopTree.condition().accept(this, data);
-        data.push();
-        whileLoopTree.body().accept(this, data);
-        data.pop();
+        whileLoopTree.body().accept(this, data.fork());
         return NoOpVisitor.super.visit(whileLoopTree, data);
     }
 
     @Override
     public Unit visit(ForLoopTree forLoopTree, Namespace<VariableStatus> data) {
-        data.push();
-        if (forLoopTree.init() != null) forLoopTree.init().accept(this, data);
-        if (forLoopTree.condition() != null) forLoopTree.condition().accept(this, data);
-        if (forLoopTree.step() != null) forLoopTree.step().accept(this, data);
-        forLoopTree.body().accept(this, data);
-        data.pop();
+        Namespace<VariableStatus> scope = data.fork();
+        if (forLoopTree.init() != null) {
+            forLoopTree.init().accept(this, scope);
+        }
+        if (forLoopTree.condition() != null) {
+            forLoopTree.condition().accept(this, scope);
+        }
+        if (forLoopTree.step() != null) {
+            forLoopTree.step().accept(this, scope);
+        }
+        forLoopTree.body().accept(this, scope);
         return NoOpVisitor.super.visit(forLoopTree, data);
     }
 
@@ -151,15 +159,5 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
     public Unit visit(BitwiseNotTree bitwiseNotTree, Namespace<VariableStatus> data) {
         bitwiseNotTree.operand().accept(this, data);
         return NoOpVisitor.super.visit(bitwiseNotTree, data);
-    }
-
-    @Override
-    public Unit visit(BlockTree blockTree, Namespace<VariableStatus> data) {
-        data.push();
-        for (StatementTree statement : blockTree.statements()) {
-            statement.accept(this, data);
-        }
-        data.pop();
-        return NoOpVisitor.super.visit(blockTree, data);
     }
 }
