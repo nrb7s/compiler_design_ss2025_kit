@@ -1,11 +1,7 @@
 package edu.kit.kastel.vads.compiler.semantic;
 
 import edu.kit.kastel.vads.compiler.lexer.Operator;
-import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
-import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
+import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.visitor.NoOpVisitor;
 import edu.kit.kastel.vads.compiler.parser.visitor.Unit;
 import org.jspecify.annotations.Nullable;
@@ -90,5 +86,68 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
         public String toString() {
             return name().toLowerCase(Locale.ROOT);
         }
+    }
+
+    // L2
+    @Override
+    public Unit visit(IfTree ifTree, Namespace<VariableStatus> data) {
+        ifTree.condition().accept(this, data);
+        ifTree.thenBranch().accept(this, data);
+        if (ifTree.elseBranch() != null) {
+            ifTree.elseBranch().accept(this, data);
+        }
+        return NoOpVisitor.super.visit(ifTree, data);
+    }
+
+    @Override
+    public Unit visit(WhileLoopTree whileLoopTree, Namespace<VariableStatus> data) {
+        whileLoopTree.condition().accept(this, data);
+        whileLoopTree.body().accept(this, data);
+        return NoOpVisitor.super.visit(whileLoopTree, data);
+    }
+
+    @Override
+    public Unit visit(ForLoopTree forLoopTree, Namespace<VariableStatus> data) {
+        if (forLoopTree.init() != null) {
+            forLoopTree.init().accept(this, data);
+        }
+        if (forLoopTree.condition() != null) {
+            forLoopTree.condition().accept(this, data);
+        }
+        if (forLoopTree.step() != null) {
+            forLoopTree.step().accept(this, data);
+        }
+        forLoopTree.body().accept(this, data);
+        return NoOpVisitor.super.visit(forLoopTree, data);
+    }
+
+    @Override
+    public Unit visit(BreakTree breakTree, Namespace<VariableStatus> data) {
+        return NoOpVisitor.super.visit(breakTree, data);
+    }
+
+    @Override
+    public Unit visit(ContinueTree continueTree, Namespace<VariableStatus> data) {
+        return NoOpVisitor.super.visit(continueTree, data);
+    }
+
+    @Override
+    public Unit visit(ConditionalTree conditionalTree, Namespace<VariableStatus> data) {
+        conditionalTree.condition().accept(this, data);
+        conditionalTree.thenExpr().accept(this, data);
+        conditionalTree.elseExpr().accept(this, data);
+        return NoOpVisitor.super.visit(conditionalTree, data);
+    }
+
+    @Override
+    public Unit visit(LogicalNotTree logicalNotTree, Namespace<VariableStatus> data) {
+        logicalNotTree.operand().accept(this, data);
+        return NoOpVisitor.super.visit(logicalNotTree, data);
+    }
+
+    @Override
+    public Unit visit(BitwiseNotTree bitwiseNotTree, Namespace<VariableStatus> data) {
+        bitwiseNotTree.operand().accept(this, data);
+        return NoOpVisitor.super.visit(bitwiseNotTree, data);
     }
 }

@@ -1,20 +1,6 @@
 package edu.kit.kastel.vads.compiler.parser;
 
-import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
-import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
-import edu.kit.kastel.vads.compiler.parser.ast.Tree;
-import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
-import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
-import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
-import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.*;
 
 import java.util.List;
 
@@ -110,6 +96,36 @@ public class Printer {
             }
             case LValueIdentTree(var name) -> printTree(name);
             case IdentExpressionTree(var name) -> printTree(name);
+            // L2
+            case IfTree(var cond, var thenBr, var elseBr) -> {
+                print("if ("); printTree(cond); print(") "); printTree(thenBr);
+                if (elseBr != null) { space(); print("else "); printTree(elseBr); }
+            }
+            case WhileLoopTree(var cond, var body) -> {
+                print("while ("); printTree(cond); print(") "); printTree(body);
+            }
+            case ForLoopTree(var init, var cond, var step, var body) -> {
+                print("for (");
+                if (init != null) printTree(init);
+                print("; ");
+                if (cond != null) printTree(cond);
+                print("; ");
+                if (step != null) printTree(step);
+                print(") ");
+                printTree(body);
+            }
+            case BreakTree _ -> print("break;");
+            case ContinueTree _ -> print("continue;");
+            case ConditionalTree(var c, var t, var e) -> {
+                printTree(c); print(" ? "); printTree(t); print(" : "); printTree(e);
+            }
+            case LogicalNotTree(var operand) -> {
+                print("!("); printTree(operand); print(")");
+            }
+            case BitwiseNotTree(var operand) -> {
+                print("~("); printTree(operand); print(")");
+            }
+            default -> throw new IllegalArgumentException("Unsupported AST node: " + tree.getClass());
         }
     }
 
