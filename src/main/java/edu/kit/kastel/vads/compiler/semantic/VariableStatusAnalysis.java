@@ -54,6 +54,9 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
 
     @Override
     public Unit visit(DeclarationTree declarationTree, Namespace<VariableStatus> data) {
+        // debug
+        // System.out.println("declaring " + declarationTree.name() + " status=" + data.get(declarationTree.name()));
+
         checkUndeclared(declarationTree.name(), data.get(declarationTree.name()));
         VariableStatus status = declarationTree.initializer() == null
             ? VariableStatus.DECLARED
@@ -91,10 +94,8 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
     // L2
     @Override
     public Unit visit(BlockTree blockTree, Namespace<VariableStatus> data) {
-        for (StatementTree statement : blockTree.statements()) {
-            statement.accept(this, data);
-        }
-        return NoOpVisitor.super.visit(blockTree, data);
+        Namespace<VariableStatus> scope = data.fork();
+        return NoOpVisitor.super.visit(blockTree, scope);
     }
 
     @Override
@@ -104,30 +105,24 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
         if (ifTree.elseBranch() != null) {
             ifTree.elseBranch().accept(this, data.fork());
         }
-        return NoOpVisitor.super.visit(ifTree, data);
+        return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(WhileLoopTree whileLoopTree, Namespace<VariableStatus> data) {
         whileLoopTree.condition().accept(this, data);
         whileLoopTree.body().accept(this, data.fork());
-        return NoOpVisitor.super.visit(whileLoopTree, data);
+        return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(ForLoopTree forLoopTree, Namespace<VariableStatus> data) {
         Namespace<VariableStatus> scope = data.fork();
-        if (forLoopTree.init() != null) {
-            forLoopTree.init().accept(this, scope);
-        }
-        if (forLoopTree.condition() != null) {
-            forLoopTree.condition().accept(this, scope);
-        }
-        if (forLoopTree.step() != null) {
-            forLoopTree.step().accept(this, scope);
-        }
+        if (forLoopTree.init() != null) forLoopTree.init().accept(this, scope);
+        if (forLoopTree.condition() != null) forLoopTree.condition().accept(this, scope);
+        if (forLoopTree.step() != null) forLoopTree.step().accept(this, scope);
         forLoopTree.body().accept(this, scope);
-        return NoOpVisitor.super.visit(forLoopTree, data);
+        return Unit.INSTANCE;
     }
 
     @Override

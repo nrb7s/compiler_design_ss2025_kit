@@ -4,8 +4,12 @@
 main:
 	push %rbp
 	mov %rsp, %rbp
-	movl $0, %ebx
-	movl %ebx, %eax
+	subl $4, %esp
+	movl $10, %ebx
+	movl $32, %ecx
+	movl %ebx, -4(%rbp)
+	addl %ecx, -4(%rbp)
+	movl -4(%rbp), %eax
 	mov %rbp, %rsp
 	pop %rbp
 	ret
