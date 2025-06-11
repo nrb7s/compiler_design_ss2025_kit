@@ -4,23 +4,33 @@ import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BinaryOperator;
 
 public class Namespace<T> {
+    private final Deque<Map<Name, T>> scopes = new ArrayDeque<>();
 
-    private final Map<Name, T> content;
+    public Namespace() { push(); }
 
-    public Namespace() {
-        this.content = new HashMap<>();
+    public void push() {
+        scopes.push(new HashMap<>());
+    }
+    public void pop() {
+        scopes.pop();
     }
 
-    public void put(NameTree name, T value, BinaryOperator<T> merger) {
-        this.content.merge(name.name(), value, merger);
+    public void put(NameTree name, T value, java.util.function.BinaryOperator<T> merger) {
+        Map<Name, T> current = scopes.peek();
+        current.merge(name.name(), value, merger);
     }
 
     public @Nullable T get(NameTree name) {
-        return this.content.get(name.name());
+        for (Map<Name, T> scope : scopes) {
+            T value = scope.get(name.name());
+            if (value != null) return value;
+        }
+        return null;
     }
 }
