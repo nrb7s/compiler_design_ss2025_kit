@@ -1,27 +1,10 @@
 package edu.kit.kastel.vads.compiler.ir;
 
-import edu.kit.kastel.vads.compiler.ir.node.Block;
-import edu.kit.kastel.vads.compiler.ir.node.DivNode;
-import edu.kit.kastel.vads.compiler.ir.node.ModNode;
-import edu.kit.kastel.vads.compiler.ir.node.Node;
+import edu.kit.kastel.vads.compiler.ir.node.*;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfo;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfoHelper;
-import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BinaryOperationTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
-import edu.kit.kastel.vads.compiler.parser.ast.DeclarationTree;
-import edu.kit.kastel.vads.compiler.parser.ast.FunctionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.IdentExpressionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LValueIdentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NameTree;
-import edu.kit.kastel.vads.compiler.parser.ast.NegateTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ProgramTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
-import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
-import edu.kit.kastel.vads.compiler.parser.ast.Tree;
-import edu.kit.kastel.vads.compiler.parser.ast.TypeTree;
+import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
 
@@ -40,6 +23,19 @@ import java.util.function.BinaryOperator;
 public class SsaTranslation {
     private final FunctionTree function;
     private final GraphConstructor constructor;
+
+    public void setCurrentBlock(Block block) {
+        this.constructor.setCurrentBlock(block);
+    }
+    public Block currentBlock() {
+        return this.constructor.currentBlock();
+    }
+    public IrGraph graph() {
+        return this.constructor.graph();
+    }
+    public void sealBlock(Block block) {
+        this.constructor.sealBlock(block);
+    }
 
     public SsaTranslation(FunctionTree function, Optimizer optimizer) {
         this.function = function;
@@ -60,11 +56,10 @@ public class SsaTranslation {
         return this.constructor.readVariable(variable, block);
     }
 
-    private Block currentBlock() {
-        return this.constructor.currentBlock();
-    }
-
     private static class SsaTranslationVisitor implements Visitor<SsaTranslation, Optional<Node>> {
+        // Loop-target stacks for break/continue
+        private final Deque<Block> breakTargetStack = new ArrayDeque<>();
+        private final Deque<Block> continueTargetStack = new ArrayDeque<>();
 
         @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
         private static final Optional<Node> NOT_AN_EXPRESSION = Optional.empty();
@@ -213,6 +208,200 @@ public class SsaTranslation {
         @Override
         public Optional<Node> visit(TypeTree typeTree, SsaTranslation data) {
             throw new UnsupportedOperationException();
+        }
+
+        // L2
+        @Override
+        public Optional<Node> visit(IfTree ifTree, SsaTranslation data) {
+            pushSpan(ifTree);
+            Node cond = ifTree.condition().accept(this, data).orElseThrow();
+            Block thenBlock = new Block(data.constructor.graph());
+            Block afterBlock = new Block(data.constructor.graph());
+            Block elseBlock = ifTree.elseBranch() != null ? new Block(data.constructor.graph()) : afterBlock;
+
+            Node branch = new edu.kit.kastel.vads.compiler.ir.node.CondJumpNode(data.currentBlock(), cond, thenBlock, elseBlock);
+            data.currentBlock().addNode(branch);
+            data.constructor.graph().registerSuccessor(data.currentBlock(), branch);
+
+            data.constructor.sealBlock(data.currentBlock());
+            data.constructor.sealBlock(thenBlock);
+            data.constructor.sealBlock(elseBlock);
+            data.constructor.sealBlock(afterBlock);
+
+            data.setCurrentBlock(thenBlock);
+            ifTree.thenBranch().accept(this, data);
+            if (data.currentBlock() != null) {
+                data.constructor.graph().registerSuccessor(data.currentBlock(), afterBlock);
+            }
+
+            if (ifTree.elseBranch() != null) {
+                data.setCurrentBlock(elseBlock);
+                ifTree.elseBranch().accept(this, data);
+                if (data.currentBlock() != null) {
+                    data.constructor.graph().registerSuccessor(data.currentBlock(), afterBlock);
+                }
+            }
+
+            data.setCurrentBlock(afterBlock);
+
+            popSpan();
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Node> visit(WhileLoopTree whileLoopTree, SsaTranslation data) {
+            pushSpan(whileLoopTree);
+
+            Block condBlock = new Block(data.constructor.graph());
+            Block bodyBlock = new Block(data.constructor.graph());
+            Block afterBlock = new Block(data.constructor.graph());
+
+            breakTargetStack.push(afterBlock);
+            continueTargetStack.push(condBlock);
+
+            data.graph().registerSuccessor(data.currentBlock(), condBlock);
+            data.setCurrentBlock(condBlock);
+
+            Node cond = whileLoopTree.condition().accept(this, data).orElseThrow();
+            CondJumpNode cj = new CondJumpNode(condBlock, cond, bodyBlock, afterBlock);
+            condBlock.addNode(cj);
+            data.graph().registerSuccessor(condBlock, cj);
+
+            data.setCurrentBlock(bodyBlock);
+            whileLoopTree.body().accept(this, data);
+            if (data.currentBlock() != null) {
+                data.graph().registerSuccessor(data.currentBlock(), condBlock);
+            }
+
+            breakTargetStack.pop();
+            continueTargetStack.pop();
+            data.setCurrentBlock(afterBlock);
+            popSpan();
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Node> visit(ForLoopTree forLoopTree, SsaTranslation data) {
+            pushSpan(forLoopTree);
+
+            Block condBlock = new Block(data.constructor.graph());
+            Block bodyBlock = new Block(data.constructor.graph());
+            Block stepBlock = new Block(data.constructor.graph());
+            Block afterBlock = new Block(data.constructor.graph());
+
+            breakTargetStack.push(afterBlock);
+            continueTargetStack.push(stepBlock);
+
+            if (forLoopTree.init() != null) {
+                forLoopTree.init().accept(this, data);
+            }
+            data.graph().registerSuccessor(data.currentBlock(), condBlock);
+            data.setCurrentBlock(condBlock);
+
+            Node cond = forLoopTree.condition() != null
+                    ? forLoopTree.condition().accept(this, data).orElseThrow()
+                    : data.constructor.newConstInt(1);
+            CondJumpNode cj = new CondJumpNode(condBlock, cond, bodyBlock, afterBlock);
+            condBlock.addNode(cj);
+            data.graph().registerSuccessor(condBlock, cj);
+
+            data.setCurrentBlock(bodyBlock);
+            forLoopTree.body().accept(this, data);
+            if (data.currentBlock() != null) {
+                data.graph().registerSuccessor(data.currentBlock(), stepBlock);
+            }
+
+            data.setCurrentBlock(stepBlock);
+            if (forLoopTree.step() != null) {
+                forLoopTree.step().accept(this, data);
+            }
+            data.graph().registerSuccessor(data.currentBlock(), condBlock);
+
+            // jump out
+            breakTargetStack.pop();
+            continueTargetStack.pop();
+            data.setCurrentBlock(afterBlock);
+
+            popSpan();
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Node> visit(BreakTree breakTree, SsaTranslation data) {
+            pushSpan(breakTree);
+            if (breakTargetStack.isEmpty()) {
+                throw new IllegalStateException("‘break’ used outside of loop");
+            }
+            // Jump to the current loop’s exit block
+            Block target = breakTargetStack.peek();
+            data.graph().registerSuccessor(data.currentBlock(), target);
+            // End this block
+            data.setCurrentBlock(null);
+            popSpan();
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Node> visit(ContinueTree continueTree, SsaTranslation data) {
+            pushSpan(continueTree);
+            if (continueTargetStack.isEmpty()) {
+                throw new IllegalStateException("‘continue’ used outside of loop");
+            }
+            // Jump to the current loop’s “step” or condition block
+            Block target = continueTargetStack.peek();
+            data.graph().registerSuccessor(data.currentBlock(), target);
+            data.setCurrentBlock(null);
+            popSpan();
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Node> visit(ConditionalTree conditionalTree, SsaTranslation data) {
+            pushSpan(conditionalTree);
+
+            Block thenBlock = new Block(data.constructor.graph());
+            Block elseBlock = new Block(data.constructor.graph());
+            Block afterBlock = new Block(data.constructor.graph());
+
+            Node cond = conditionalTree.condition().accept(this, data).orElseThrow();
+            Node branch = new edu.kit.kastel.vads.compiler.ir.node.CondJumpNode(data.currentBlock(), cond, thenBlock, elseBlock);
+            data.currentBlock().addNode(branch);
+            data.constructor.graph().registerSuccessor(data.currentBlock(), branch);
+
+            data.setCurrentBlock(thenBlock);
+            Node thenRes = conditionalTree.thenExpr().accept(this, data).orElseThrow();
+            data.constructor.graph().registerSuccessor(data.currentBlock(), afterBlock);
+
+            data.setCurrentBlock(elseBlock);
+            Node elseRes = conditionalTree.elseExpr().accept(this, data).orElseThrow();
+            data.constructor.graph().registerSuccessor(data.currentBlock(), afterBlock);
+
+            data.setCurrentBlock(afterBlock);
+            var phi = new edu.kit.kastel.vads.compiler.ir.node.Phi(afterBlock);
+            phi.appendOperand(thenRes);
+            phi.appendOperand(elseRes);
+            afterBlock.addNode(phi);
+
+            popSpan();
+            return Optional.of(phi);
+        }
+
+        @Override
+        public Optional<Node> visit(LogicalNotTree logicalNotTree, SsaTranslation data) {
+            pushSpan(logicalNotTree);
+            Node operand = logicalNotTree.operand().accept(this, data).orElseThrow();
+            Node res = data.constructor.newLogicalNot(operand);
+            popSpan();
+            return Optional.of(res);
+        }
+
+        @Override
+        public Optional<Node> visit(BitwiseNotTree bitwiseNottree, SsaTranslation data) {
+            pushSpan(bitwiseNottree);
+            Node operand = bitwiseNottree.operand().accept(this, data).orElseThrow();
+            Node res = data.constructor.newBitwiseNot(operand);
+            popSpan();
+            return Optional.of(res);
         }
 
         private Node projResultDivMod(SsaTranslation data, Node divMod) {

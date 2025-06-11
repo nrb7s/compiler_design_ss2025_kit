@@ -1,15 +1,8 @@
 package edu.kit.kastel.vads.compiler.ir.util;
 
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
-import edu.kit.kastel.vads.compiler.ir.node.BinaryOperationNode;
-import edu.kit.kastel.vads.compiler.ir.node.Block;
-import edu.kit.kastel.vads.compiler.ir.node.ConstIntNode;
-import edu.kit.kastel.vads.compiler.ir.node.Node;
-import edu.kit.kastel.vads.compiler.ir.node.Phi;
-import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
+import edu.kit.kastel.vads.compiler.ir.node.*;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode.SimpleProjectionInfo;
-import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
-import edu.kit.kastel.vads.compiler.ir.node.StartNode;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -228,6 +221,10 @@ public class YCompPrinter {
             }
             case ReturnNode _ -> VcgColor.CONTROL_FLOW;
             case StartNode _ -> VcgColor.CONTROL_FLOW;
+            case CondJumpNode _ -> VcgColor.CONTROL_FLOW;
+            case LogicalNotNode _ -> VcgColor.NORMAL;
+            case BitwiseNotNode _ -> VcgColor.NORMAL;
+            // default -> VcgColor.NORMAL;
         };
     }
 

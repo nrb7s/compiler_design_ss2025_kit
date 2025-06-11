@@ -4,6 +4,7 @@ import edu.kit.kastel.vads.compiler.ir.node.*;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
 import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,7 +20,7 @@ class GraphConstructor {
     private final Map<Block, Node> currentSideEffect = new HashMap<>();
     private final Map<Block, Phi> incompleteSideEffectPhis = new HashMap<>();
     private final Set<Block> sealedBlocks = new HashSet<>();
-    private Block currentBlock;
+    private @Nullable Block currentBlock;
 
     public GraphConstructor(Optimizer optimizer, String name) {
         this.optimizer = optimizer;
@@ -78,6 +79,23 @@ class GraphConstructor {
     public Phi newPhi() {
         // don't transform phi directly, it is not ready yet
         return new Phi(currentBlock());
+    }
+
+    // L2
+    public void setCurrentBlock(Block block) {
+        this.currentBlock = block;
+    }
+
+    public Node newBitwiseNot(Node operand) {
+        BitwiseNotNode node = new BitwiseNotNode(currentBlock(), operand);
+        currentBlock.addNode(node);
+        return this.optimizer.transform(node);
+    }
+
+    public Node newLogicalNot(Node operand) {
+        LogicalNotNode node = new LogicalNotNode(currentBlock(), operand);
+        currentBlock().addNode(node);
+        return this.optimizer.transform(node);
     }
 
     public IrGraph graph() {
@@ -223,6 +241,7 @@ class GraphConstructor {
             Node value = buildExpr(ret.expression());
             Node retNode = newReturn(value);
             graph.registerSuccessor(currentBlock, retNode);
+            currentBlock.addNode(retNode);
             // No more code should be generated in this block after return
             currentBlock = null;
         } else if (stmt instanceof ContinueTree || stmt instanceof BreakTree) {
@@ -240,6 +259,7 @@ class GraphConstructor {
         Node condValue = buildExpr(ifTree.condition());
         // Condition jump: If condValue != 0 goto thenBlock else elseBlock
         Node branchNode = new CondJumpNode(currentBlock, condValue, thenBlock, elseBlock);
+        currentBlock.addNode(branchNode);
         graph.registerSuccessor(currentBlock, branchNode);
 
         // Then branch
@@ -272,6 +292,7 @@ class GraphConstructor {
 
         Node condValue = buildExpr(whileTree.condition());
         Node condJump = new CondJumpNode(currentBlock, condValue, bodyBlock, afterBlock);
+        currentBlock.addNode(condJump);
         graph.registerSuccessor(currentBlock, condJump);
 
         // Body
@@ -290,7 +311,9 @@ class GraphConstructor {
             case LiteralTree lit -> {
                 // int only
                 int value = Integer.parseInt(lit.value());
-                return newConstInt(value);
+                Node n = newConstInt(value);
+                currentBlock.addNode(n);
+                return n;
             }
             case IdentExpressionTree ident -> {
                 Name name = ident.name().name(); // the name of NameTree
@@ -299,12 +322,14 @@ class GraphConstructor {
             }
             case NegateTree neg -> {
                 Node operand = buildExpr(neg.expression());
-                return newSub(newConstInt(0), operand);
+                Node n = newSub(newConstInt(0), operand);
+                currentBlock.addNode(n);
+                return n;
             }
             case BinaryOperationTree bin -> {
                 Node left = buildExpr(bin.lhs());
                 Node right = buildExpr(bin.rhs());
-                return switch (bin.operatorType()) {
+                Node n = switch (bin.operatorType()) {
                     case PLUS -> newAdd(left, right);
                     case MINUS -> newSub(left, right);
                     case MUL -> newMul(left, right);
@@ -312,6 +337,8 @@ class GraphConstructor {
                     case MOD -> newMod(left, right);
                     default -> throw new UnsupportedOperationException("Unknown binary op: " + bin.operatorType());
                 };
+                currentBlock.addNode(n);
+                return n;
             }
             case ConditionalTree cond -> {
                 // SSA: Build blocks for then/else, then merge with a Phi node in afterBlock
@@ -321,16 +348,19 @@ class GraphConstructor {
 
                 Node condValue = buildExpr(cond.condition());
                 Node branchNode = new CondJumpNode(currentBlock, condValue, thenBlock, elseBlock);
+                currentBlock.addNode(branchNode);
                 graph.registerSuccessor(currentBlock, branchNode);
 
                 // Then branch
                 currentBlock = thenBlock;
                 Node thenResult = buildExpr(cond.thenExpr());
+                currentBlock.addNode(thenResult);
                 graph.registerSuccessor(currentBlock, afterBlock);
 
                 // Else branch
                 currentBlock = elseBlock;
                 Node elseResult = buildExpr(cond.elseExpr());
+                currentBlock.addNode(elseResult);
                 graph.registerSuccessor(currentBlock, afterBlock);
 
                 // Merge with Phi
@@ -338,6 +368,7 @@ class GraphConstructor {
                 Phi phi = new Phi(currentBlock);
                 phi.appendOperand(thenResult);
                 phi.appendOperand(elseResult);
+                currentBlock.addNode(phi);
                 return phi;
             }
             case null, default -> throw new UnsupportedOperationException("Unknown ExpressionTree: " + expr);
