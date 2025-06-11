@@ -155,13 +155,14 @@ public class Parser {
 
         StatementTree step = null;
         if (!tokenSource.peek().isSeparator(SeparatorType.PAREN_CLOSE)) {
-            step = new ExpressionStatementTree(parseExpression());
+            step = parseSimple();
         }
         tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
 
         StatementTree body = parseStatement();
         return new ForLoopTree(init, condition, step, body);
     }
+    // End L2
 
     private StatementTree parseDeclaration() {
         Keyword type = this.tokenSource.expectKeyword(KeywordType.INT);
