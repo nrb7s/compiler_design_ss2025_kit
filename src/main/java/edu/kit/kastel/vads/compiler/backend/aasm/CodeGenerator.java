@@ -62,11 +62,100 @@ public class CodeGenerator {
         return builder.toString();
     }
 
-    private void generateAssemblyForGraph(IrGraph graph, StringBuilder builder, Map<Node, Register> registers, Map<Integer,Integer> spillOffset) {
-        Set<Node> visited = new HashSet<>();
-        scanAsm(graph.endBlock(), visited, builder, registers, spillOffset);
+    private void generateAssemblyForGraph(IrGraph graph,
+                                          StringBuilder builder,
+                                          Map<Node, Register> registers,
+                                          Map<Integer,Integer> spillOffset) {
+        List<Block> blocks = reversePostOrder(graph);
+
+        builder.append("\tjmp L").append(blocks.get(0).getId()).append("\n");
+
+        for (Block block : blocks) {
+            builder.append("L").append(block.getId()).append(":\n");
+            for (Node node : block.nodes()) {
+                if (node instanceof Phi) {
+                    continue;
+                }
+                if (node instanceof PhiElimination.CopyNode copy) {
+                    String src = regAllocate(predecessorSkipProj(copy, PhiElimination.CopyNode.SRC), registers, spillOffset);
+                    String dst = regAllocate(predecessorSkipProj(copy, PhiElimination.CopyNode.DST), registers, spillOffset);
+                    if (!src.equals(dst)) {
+                        builder.append("\tmovl ").append(src).append(", ").append(dst).append("\n");
+                    }
+                    continue;
+                }
+                switch (node) {
+                    case AddNode add   -> binaryAsm(builder, registers, add,  "addl", spillOffset);
+                    case SubNode sub   -> binaryAsm(builder, registers, sub,  "subl", spillOffset);
+                    case MulNode mul   -> binaryAsm(builder, registers, mul,  "imull", spillOffset);
+                    case DivNode div   -> divide(builder, registers, div,    spillOffset);
+                    case ModNode mod   -> mod   (builder, registers, mod,    spillOffset);
+
+                    case CmpGTNode gt  -> genCmpSet(builder, registers, spillOffset, gt, "setg");
+                    case CmpGENode ge  -> genCmpSet(builder, registers, spillOffset, ge, "setge");
+                    case CmpLTNode lt  -> genCmpSet(builder, registers, spillOffset, lt, "setl");
+                    case CmpLENode le  -> genCmpSet(builder, registers, spillOffset, le, "setle");
+                    case CmpEQNode eq  -> genCmpSet(builder, registers, spillOffset, eq, "sete");
+                    case CmpNENode ne  -> genCmpSet(builder, registers, spillOffset, ne, "setne");
+
+                    case AndNode and   -> binaryAsm(builder, registers, and,  "andl", spillOffset);
+                    case OrNode  or    -> binaryAsm(builder, registers, or,   "orl",  spillOffset);
+                    case XorNode xor  -> binaryAsm(builder, registers, xor,  "xorl", spillOffset);
+
+                    case ShlNode shl  -> shiftAsm(builder, registers, shl,  "shll", spillOffset);
+                    case ShrNode shr  -> shiftAsm(builder, registers, shr,  "sarl", spillOffset);
+
+                    case BitwiseNotNode bn -> {
+                        String r = regAllocate(bn.operand(), registers, spillOffset);
+                        builder.append("\tnotl ").append(r).append("\n");
+                    }
+                    case LogicalNotNode ln -> {
+                        String r = regAllocate(ln.operand(), registers, spillOffset);
+                        builder.append("\tcmpl $0, ").append(r).append("\n")
+                                .append("\tsete %al\n")
+                                .append("\tmovzbl %al, ").append(r).append("\n");
+                    }
+                    case CondJumpNode cj -> {
+                        String cond = regAllocate(cj.condition(), registers, spillOffset);
+                        builder.append("\tcmpl $0, ").append(cond).append("\n")
+                                .append("\tjne L").append(cj.trueTarget().getId()).append("\n")
+                                .append("\tjmp L").append(cj.falseTarget().getId()).append("\n");
+                    }
+                    case ReturnNode r -> {
+                        Node res = predecessorSkipProj(r, ReturnNode.RESULT);
+                        builder.append("\tmovl ")
+                                .append(regAllocate(res, registers, spillOffset))
+                                .append(", %eax\n");
+                        builder.append("\tret\n");
+                    }
+                    case ConstIntNode c -> {
+                        String dst = regAllocate(c, registers, spillOffset);
+                        builder.append("\tmovl $").append(c.value()).append(", ").append(dst).append("\n");
+                    }
+                    default -> {}
+                }
+            }
+        }
     }
 
+    private List<Block> reversePostOrder(IrGraph graph) {
+        List<Block> order = new ArrayList<>();
+        Set<Block> seen = new HashSet<>();
+        dfs(graph.startBlock(), seen, order);
+        Collections.reverse(order);
+        return order;
+    }
+    private void dfs(Block b, Set<Block> seen, List<Block> order) {
+        if (!seen.add(b)) return;
+        Node last = b.nodes().isEmpty() ? null : b.nodes().get(b.nodes().size() - 1);
+        if (last instanceof CondJumpNode cj) {
+            dfs(cj.trueTarget(), seen, order);
+            dfs(cj.falseTarget(), seen, order);
+        }
+        order.add(b);
+    }
+
+    // abandoned
     private void scanAsm(Node node, Set<Node> visited, StringBuilder builder, Map<Node, Register> registers, Map<Integer,Integer> spillOffset) {
         for (Node predecessor : node.predecessors()) {
             if (visited.add(predecessor)) {
