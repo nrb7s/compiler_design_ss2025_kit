@@ -86,6 +86,52 @@ class GraphConstructor {
         this.currentBlock = block;
     }
 
+    public Node newCmpGT(Node l, Node r) {  // >
+        return optimizer.transform(new CmpGTNode(currentBlock(), l, r));
+    }
+
+    public Node newCmpGE(Node l, Node r) {  // >=
+        return optimizer.transform(new CmpGENode(currentBlock(), l, r));
+    }
+
+    public Node newCmpLT(Node l, Node r) {  // <
+        return optimizer.transform(new CmpLTNode(currentBlock(), l, r));
+    }
+
+    public Node newCmpLE(Node l, Node r) {  // <=
+        return optimizer.transform(new CmpLENode(currentBlock(), l, r));
+    }
+
+    public Node newCmpEQ(Node l, Node r) {  // ==
+        return optimizer.transform(new CmpEQNode(currentBlock(), l, r));
+    }
+
+    public Node newCmpNE(Node l, Node r) {  // !=
+        return optimizer.transform(new CmpNENode(currentBlock(), l, r));
+    }
+
+    public Node newAnd(Node l, Node r) {     // &
+        return optimizer.transform(new AndNode(currentBlock(), l, r));
+    }
+
+    public Node newOr(Node l, Node r) {      // |
+        return optimizer.transform(new OrNode(currentBlock(), l, r));
+    }
+
+    public Node newXor(Node l, Node r) {     // ^
+        return optimizer.transform(new XorNode(currentBlock(), l, r));
+    }
+
+    // r & 0x1F
+    public Node newShl(Node l, Node r) {     // <<
+        return optimizer.transform(new ShlNode(currentBlock(), l, r));
+    }
+
+    public Node newShr(Node l, Node r) {     // >>
+        return optimizer.transform(new ShrNode(currentBlock(), l, r));
+    }
+
+
     public Node newBitwiseNot(Node operand) {
         BitwiseNotNode node = new BitwiseNotNode(currentBlock(), operand);
         currentBlock.addNode(node);

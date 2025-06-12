@@ -80,21 +80,35 @@ public class CodeGenerator {
             case DivNode div -> divide(builder, registers, div, spillOffset);
             case ModNode mod -> mod(builder, registers, mod, spillOffset);
             // L2
-            case CondJumpNode cj -> {
-                String condReg = regAllocate(cj.condition(), registers, spillOffset);
-                builder.append("\tcmpl $0, ").append(condReg).append("\n");
-                builder.append("\tjne L").append(cj.trueTarget().getId()).append("\n");
-                builder.append("\tjmp L").append(cj.falseTarget().getId()).append("\n");
-            }
+            case CmpGTNode gt -> genCmpSet(builder, registers, spillOffset, gt, "setg");
+            case CmpGENode ge -> genCmpSet(builder, registers, spillOffset, ge, "setge");
+            case CmpLTNode lt -> genCmpSet(builder, registers, spillOffset, lt, "setl");
+            case CmpLENode le -> genCmpSet(builder, registers, spillOffset, le, "setle");
+            case CmpEQNode eq -> genCmpSet(builder, registers, spillOffset, eq, "sete");
+            case CmpNENode ne -> genCmpSet(builder, registers, spillOffset, ne, "setne");
+
+            case AndNode and -> binaryAsm(builder, registers, and, "andl", spillOffset);
+            case OrNode  or  -> binaryAsm(builder, registers, or,  "orl" , spillOffset);
+            case XorNode xor -> binaryAsm(builder, registers, xor, "xorl", spillOffset);
+
+            case ShlNode shl -> shiftAsm(builder, registers, shl, "shll", spillOffset); // <<
+            case ShrNode shr -> shiftAsm(builder, registers, shr, "sarl", spillOffset); // >>
+
             case BitwiseNotNode bn -> {
-                String opReg = regAllocate(bn.operand(), registers, spillOffset);
-                builder.append("\tnotl ").append(opReg).append("\n");
+                String r = regAllocate(bn.operand(), registers, spillOffset);
+                builder.append("\tnotl ").append(r).append("\n");
             }
             case LogicalNotNode ln -> {
-                String opReg = regAllocate(ln.operand(), registers, spillOffset);
-                builder.append("\tcmpl $0, ").append(opReg).append("\n");
-                builder.append("\tsete %al\n");
-                builder.append("\tmovzbl %al, ").append(opReg).append("\n");
+                String r = regAllocate(ln.operand(), registers, spillOffset);
+                builder.append("\tcmpl $0, ").append(r).append("\n")
+                        .append("\tsete %al\n")
+                        .append("\tmovzbl %al, ").append(r).append("\n");
+            }
+            case CondJumpNode cj -> {
+                String condReg = regAllocate(cj.condition(), registers, spillOffset);
+                builder.append("\tcmpl $0, ").append(condReg).append("\n")
+                        .append("\tjne L").append(cj.trueTarget().getId()).append("\n")
+                        .append("\tjmp L").append(cj.falseTarget().getId()).append("\n");
             }
             // L2 ends
             case ReturnNode r -> {
@@ -257,6 +271,44 @@ public class CodeGenerator {
             int off = spillOffset.get(id);
             return "-" + off + "(%rbp)";
         }
+    }
+
+    // L2
+    private void genCmpSet(StringBuilder b, Map<Node,Register> regs,
+                           Map<Integer,Integer> spill,
+                           BinaryOperationNode cmp, String setInstr) {
+
+        String lhs = regAllocate(predecessorSkipProj(cmp, BinaryOperationNode.LEFT),  regs, spill);
+        String rhs = regAllocate(predecessorSkipProj(cmp, BinaryOperationNode.RIGHT), regs, spill);
+        String dst = regAllocate(cmp, regs, spill);
+
+        // cmp lhs, rhs   ->  setX %al   -> movzx %al, dst
+        b.append("\tcmpl ").append(rhs).append(", ").append(lhs).append("\n")
+                .append("\t").append(setInstr).append(" %al\n")
+                .append("\tmovzbl %al, ").append(dst).append("\n");
+    }
+
+    private void shiftAsm(StringBuilder b, Map<Node,Register> regs,
+                          BinaryOperationNode sh, String instr, Map<Integer,Integer> spill) {
+
+        Node srcNode = predecessorSkipProj(sh, BinaryOperationNode.LEFT);
+        Node amtNode = predecessorSkipProj(sh, BinaryOperationNode.RIGHT);
+
+        String src = regAllocate(srcNode, regs, spill);
+        String amt = regAllocate(amtNode, regs, spill);
+        String dst = regAllocate(sh, regs, spill);
+
+        // mov src -> dst
+        if (!dst.equals(src))
+            b.append("\tmovl ").append(src).append(", ").append(dst).append("\n");
+        // offset in cl
+        if (isMemory(amt) || !amt.equals("%ecx")) {
+            b.append("\tmovl ").append(amt).append(", %ecx\n");
+            amt = "%cl";
+        } else {
+            amt = "%cl";       // amt is in ecx
+        }
+        b.append("\t").append(instr).append(" ").append(amt).append(", ").append(dst).append("\n");
     }
 
 
