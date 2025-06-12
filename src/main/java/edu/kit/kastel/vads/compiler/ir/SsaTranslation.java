@@ -118,7 +118,7 @@ public class SsaTranslation {
                 case LT  -> data.constructor.newCmpLT(lhs, rhs);
                 case LE  -> data.constructor.newCmpLE(lhs, rhs);
                 case EQ  -> data.constructor.newCmpEQ(lhs, rhs);
-                case NEQ -> data.constructor.newCmpNE(lhs, rhs);
+                case NE -> data.constructor.newCmpNE(lhs, rhs);
                 case AND -> data.constructor.newAnd(lhs, rhs);
                 case OR  -> data.constructor.newOr(lhs, rhs);
                 case XOR -> data.constructor.newXor(lhs, rhs);

@@ -404,7 +404,7 @@ class GraphConstructor {
                     case GT    -> newCmpGT(left, right);   // >
                     case GE    -> newCmpGE(left, right);   // >=
                     case EQ    -> newCmpEQ(left, right);   // ==
-                    case NEQ    -> newCmpNE(left, right);   // !=
+                    case NE    -> newCmpNE(left, right);   // !=
                     default -> throw new UnsupportedOperationException("Unknown binary op: " + bin.operatorType());
                 };
                 currentBlock.addNode(n);

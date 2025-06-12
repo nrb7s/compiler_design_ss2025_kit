@@ -32,7 +32,7 @@ public record Operator(OperatorType type, Span span) implements Token {
         ASSIGN("="),
         // L2
         EQ("=="),
-        NEQ("!="),
+        NE("!="),
         LT("<"),
         LE("<="),
         GT(">"),

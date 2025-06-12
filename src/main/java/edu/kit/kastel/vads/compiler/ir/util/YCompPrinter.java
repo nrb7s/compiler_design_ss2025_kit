@@ -1,6 +1,7 @@
 package edu.kit.kastel.vads.compiler.ir.util;
 
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
+import edu.kit.kastel.vads.compiler.ir.PhiElimination;
 import edu.kit.kastel.vads.compiler.ir.node.*;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode.SimpleProjectionInfo;
 
@@ -210,6 +211,7 @@ public class YCompPrinter {
             case Block _ -> VcgColor.NORMAL;
             case ConstIntNode _ -> VcgColor.NORMAL;
             case Phi _ -> VcgColor.PHI;
+            case PhiElimination.CopyNode _ -> VcgColor.PHI;
             case ProjNode proj -> {
                 if (proj.projectionInfo() == SimpleProjectionInfo.SIDE_EFFECT) {
                     yield VcgColor.MEMORY;
@@ -224,7 +226,7 @@ public class YCompPrinter {
             case CondJumpNode _ -> VcgColor.CONTROL_FLOW;
             case LogicalNotNode _ -> VcgColor.NORMAL;
             case BitwiseNotNode _ -> VcgColor.NORMAL;
-            // default -> VcgColor.NORMAL;
+            default -> VcgColor.NORMAL; // still a lot of nodes not categorised
         };
     }
 

@@ -2,6 +2,7 @@ package edu.kit.kastel.vads.compiler.backend.aasm;
 
 import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
+import edu.kit.kastel.vads.compiler.ir.PhiElimination;
 import edu.kit.kastel.vads.compiler.ir.node.*;
 
 import java.util.*;
@@ -109,6 +110,19 @@ public class CodeGenerator {
                 builder.append("\tcmpl $0, ").append(condReg).append("\n")
                         .append("\tjne L").append(cj.trueTarget().getId()).append("\n")
                         .append("\tjmp L").append(cj.falseTarget().getId()).append("\n");
+            }
+            case PhiElimination.CopyNode copy -> {
+                String src = regAllocate(
+                        predecessorSkipProj(copy, PhiElimination.CopyNode.SRC),
+                        registers, spillOffset
+                );
+                String dst = regAllocate(
+                        predecessorSkipProj(copy, PhiElimination.CopyNode.DST),
+                        registers, spillOffset
+                );
+                if (!src.equals(dst)) {
+                    builder.append("\tmovl ").append(src).append(", ").append(dst).append("\n");
+                }
             }
             // L2 ends
             case ReturnNode r -> {

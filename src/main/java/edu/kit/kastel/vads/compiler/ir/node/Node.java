@@ -1,5 +1,6 @@
 package edu.kit.kastel.vads.compiler.ir.node;
 
+import edu.kit.kastel.vads.compiler.ir.PhiElimination;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfo;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.util.DebugInfoHelper;
@@ -9,7 +10,8 @@ import java.util.List;
 
 /// The base class for all nodes.
 public sealed abstract class Node permits BinaryOperationNode, Block, ConstIntNode,
-        Phi, ProjNode, ReturnNode, StartNode, CondJumpNode, BitwiseNotNode, LogicalNotNode {
+        Phi, ProjNode, ReturnNode, StartNode, CondJumpNode, BitwiseNotNode, LogicalNotNode,
+        PhiElimination.CopyNode {
     private final IrGraph graph;
     private final Block block;
     private final List<Node> predecessors = new ArrayList<>();

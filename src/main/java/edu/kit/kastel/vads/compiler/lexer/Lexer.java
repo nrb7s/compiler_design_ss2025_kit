@@ -68,7 +68,7 @@ public class Lexer {
         if (match("<<=")) return new Operator(Operator.OperatorType.ASSIGN_LSHIFT, buildSpan(3));
         if (match(">>=")) return new Operator(Operator.OperatorType.ASSIGN_RSHIFT, buildSpan(3));
         if (match("==")) return new Operator(Operator.OperatorType.EQ, buildSpan(2));
-        if (match("!=")) return new Operator(Operator.OperatorType.NEQ, buildSpan(2));
+        if (match("!=")) return new Operator(Operator.OperatorType.NE, buildSpan(2));
         if (match("<=")) return new Operator(Operator.OperatorType.LE, buildSpan(2));
         if (match(">=")) return new Operator(Operator.OperatorType.GE, buildSpan(2));
         if (match("&&")) return new Operator(Operator.OperatorType.ANDAND, buildSpan(2));

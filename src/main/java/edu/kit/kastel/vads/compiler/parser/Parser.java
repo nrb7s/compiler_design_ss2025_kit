@@ -273,8 +273,8 @@ public class Parser {
         while (true) {
             if (matchOperator(OperatorType.EQ)) {
                 lhs = new BinaryOperationTree(lhs, parseRelational(), OperatorType.EQ);
-            } else if (matchOperator(OperatorType.NEQ)) {
-                lhs = new BinaryOperationTree(lhs, parseRelational(), OperatorType.NEQ);
+            } else if (matchOperator(OperatorType.NE)) {
+                lhs = new BinaryOperationTree(lhs, parseRelational(), OperatorType.NE);
             } else {
                 return lhs;
             }
