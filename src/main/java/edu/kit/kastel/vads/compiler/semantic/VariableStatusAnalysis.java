@@ -94,34 +94,41 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
     // L2
     @Override
     public Unit visit(BlockTree blockTree, Namespace<VariableStatus> data) {
-        Namespace<VariableStatus> scope = data.fork();
-        return NoOpVisitor.super.visit(blockTree, scope);
+        // Namespace<VariableStatus> scope = data.fork();
+        // return NoOpVisitor.super.visit(blockTree, scope);
+        return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(IfTree ifTree, Namespace<VariableStatus> data) {
+        /*
         ifTree.condition().accept(this, data);
         ifTree.thenBranch().accept(this, data.fork());
         if (ifTree.elseBranch() != null) {
             ifTree.elseBranch().accept(this, data.fork());
         }
+         */
         return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(WhileLoopTree whileLoopTree, Namespace<VariableStatus> data) {
+        /*
         whileLoopTree.condition().accept(this, data);
         whileLoopTree.body().accept(this, data.fork());
+         */
         return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(ForLoopTree forLoopTree, Namespace<VariableStatus> data) {
+        /*
         Namespace<VariableStatus> scope = data.fork();
         if (forLoopTree.init() != null) forLoopTree.init().accept(this, scope);
         if (forLoopTree.condition() != null) forLoopTree.condition().accept(this, scope);
         if (forLoopTree.step() != null) forLoopTree.step().accept(this, scope);
         forLoopTree.body().accept(this, scope);
+         */
         return Unit.INSTANCE;
     }
 
