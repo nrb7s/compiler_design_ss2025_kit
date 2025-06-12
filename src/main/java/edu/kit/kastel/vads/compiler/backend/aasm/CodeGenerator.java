@@ -137,7 +137,10 @@ public class CodeGenerator {
                         .append(", ").append(dest)
                         .append("\n");
             }
-            case Phi _ -> throw new UnsupportedOperationException("phi");
+            case Phi _ -> {
+                return;
+                // throw new UnsupportedOperationException("phi");
+            }
             case Block _, ProjNode _, StartNode _ -> {
                 // do nothing, skip line break
                 return;
