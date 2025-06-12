@@ -304,10 +304,9 @@ public class CodeGenerator {
         // offset in cl
         if (isMemory(amt) || !amt.equals("%ecx")) {
             b.append("\tmovl ").append(amt).append(", %ecx\n");
-            amt = "%cl";
-        } else {
-            amt = "%cl";       // amt is in ecx
         }
+
+        b.append("\tandl $0x1F, %ecx\n");
         b.append("\t").append(instr).append(" ").append(amt).append(", ").append(dst).append("\n");
     }
 

@@ -381,6 +381,30 @@ class GraphConstructor {
                     case MUL -> newMul(left, right);
                     case DIV -> newDiv(left, right);
                     case MOD -> newMod(left, right);
+                    // L2
+                    case SHL   -> {                        // <<
+                        if (bin.rhs() instanceof LiteralTree lit) {
+                            int amt = Integer.parseInt(lit.value()) & 0x1F;
+                            right   = newConstInt(amt);
+                        }
+                        yield newShl(left, right);
+                    }
+                    case SHR   -> {                        // >>
+                        if (bin.rhs() instanceof LiteralTree lit) {
+                            int amt = Integer.parseInt(lit.value()) & 0x1F;
+                            right   = newConstInt(amt);
+                        }
+                        yield newShr(left, right);
+                    }
+                    case AND   -> newAnd(left, right);     // &
+                    case OR    -> newOr (left, right);     // |
+                    case XOR   -> newXor(left, right);     // ^
+                    case LT    -> newCmpLT(left, right);   // <
+                    case LE    -> newCmpLE(left, right);   // <=
+                    case GT    -> newCmpGT(left, right);   // >
+                    case GE    -> newCmpGE(left, right);   // >=
+                    case EQ    -> newCmpEQ(left, right);   // ==
+                    case NEQ    -> newCmpNE(left, right);   // !=
                     default -> throw new UnsupportedOperationException("Unknown binary op: " + bin.operatorType());
                 };
                 currentBlock.addNode(n);

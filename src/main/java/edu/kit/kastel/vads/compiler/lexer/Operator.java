@@ -53,6 +53,8 @@ public record Operator(OperatorType type, Span span) implements Token {
         ASSIGN_XOR("^="),
         QUESTION("?"),
         COLON(":"),
+        SHL("<<"),
+        SHR(">>")
         ;
 
         private final String value;
