@@ -20,7 +20,6 @@ public final class PhiElimination {
 
             for (Phi phi : phis) {
                 Node dst = phi;
-
                 int idx = 0;
                 for (Node predNode : b.predecessors()) {
                     Block pred = predNode.block();
