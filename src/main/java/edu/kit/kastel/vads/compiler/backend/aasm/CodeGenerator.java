@@ -318,8 +318,14 @@ public class CodeGenerator {
 
         // cmp lhs, rhs   ->  setX %al   -> movzx %al, dst
         b.append("\tcmpl ").append(rhs).append(", ").append(lhs).append("\n")
-                .append("\t").append(setInstr).append(" %al\n")
-                .append("\tmovzbl %al, ").append(dst).append("\n");
+                .append("\t").append(setInstr).append(" %al\n");
+
+        if (isMemory(dst)) {
+            b.append("\tmovzbl %al, ").append(TEMP_REG_1).append("\n")
+                    .append("\tmovl ").append(TEMP_REG_1).append(", ").append(dst).append("\n");
+        } else {
+            b.append("\tmovzbl %al, ").append(dst).append("\n");
+        }
     }
 
     private void shiftAsm(StringBuilder b, Map<Node,Register> regs,
