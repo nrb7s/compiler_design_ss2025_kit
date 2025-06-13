@@ -59,6 +59,12 @@ public class Main {
             SsaTranslation translation = new SsaTranslation(function, new LocalValueNumbering());
             IrGraph g = translation.translate();
             PhiElimination.run(g); // phi eliminate
+
+            // debug dump
+            // System.out.println("==== IR Graph for function " + g.name() + " ====");
+            // System.out.println(YCompPrinter.print(g));
+            // ends
+
             graphs.add(g);
         }
 

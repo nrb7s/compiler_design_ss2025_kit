@@ -283,6 +283,8 @@ class GraphConstructor {
             buildIf(ifTree);
         } else if (stmt instanceof WhileLoopTree whileTree) {
             buildWhile(whileTree);
+        } else if (stmt instanceof ForLoopTree forTree) {
+            buildFor(forTree);
         } else if (stmt instanceof ReturnTree ret) {
             Node value = buildExpr(ret.expression());
             Node retNode = newReturn(value);
@@ -308,11 +310,16 @@ class GraphConstructor {
         currentBlock.addNode(branchNode);
         graph.registerSuccessor(currentBlock, branchNode);
 
+        // CFG for L2
+        currentBlock.addCfgSuccessor(thenBlock);
+        currentBlock.addCfgSuccessor(elseBlock);
+
         // Then branch
         currentBlock = thenBlock;
         buildBody(ifTree.thenBranch());
         if (currentBlock != null) { // block might be null if ended by return
             graph.registerSuccessor(currentBlock, afterBlock);
+            currentBlock.addCfgSuccessor(afterBlock);
         }
 
         // Else branch
@@ -321,6 +328,7 @@ class GraphConstructor {
             buildBody(ifTree.elseBranch());
             if (currentBlock != null) {
                 graph.registerSuccessor(currentBlock, afterBlock);
+                currentBlock.addCfgSuccessor(afterBlock);
             }
         }
         // Continue in afterBlock
@@ -341,14 +349,54 @@ class GraphConstructor {
         currentBlock.addNode(condJump);
         graph.registerSuccessor(currentBlock, condJump);
 
+        currentBlock.addCfgSuccessor(bodyBlock);
+        currentBlock.addCfgSuccessor(afterBlock);
+
         // Body
         currentBlock = bodyBlock;
         buildBody(whileTree.body());
         if (currentBlock != null) {
             // Loop back to cond block
             graph.registerSuccessor(currentBlock, condBlock);
+            currentBlock.addCfgSuccessor(condBlock);
         }
         // Continue in after block
+        currentBlock = afterBlock;
+    }
+
+    private void buildFor(ForLoopTree forTree) {
+        Block condBlock = new Block(graph);
+        Block bodyBlock = new Block(graph);
+        Block stepBlock = new Block(graph);
+        Block afterBlock = new Block(graph);
+
+        // for (init; cond; step) {body}
+        if (forTree.init() != null)
+            buildBody(forTree.init());
+        graph.registerSuccessor(currentBlock, condBlock);
+        currentBlock.addCfgSuccessor(condBlock);
+        currentBlock = condBlock;
+
+        Node condValue = buildExpr(forTree.condition());
+        Node condJump = new CondJumpNode(currentBlock, condValue, bodyBlock, afterBlock);
+        currentBlock.addNode(condJump);
+        graph.registerSuccessor(currentBlock, condJump);
+        currentBlock.addCfgSuccessor(bodyBlock);
+        currentBlock.addCfgSuccessor(afterBlock);
+
+        currentBlock = bodyBlock;
+        buildBody(forTree.body());
+        if (currentBlock != null) {
+            graph.registerSuccessor(currentBlock, stepBlock);
+            currentBlock.addCfgSuccessor(stepBlock);
+        }
+
+        currentBlock = stepBlock;
+        if (forTree.step() != null)
+            buildBody(forTree.step());
+        graph.registerSuccessor(currentBlock, condBlock);
+        currentBlock.addCfgSuccessor(condBlock);
+
         currentBlock = afterBlock;
     }
 
