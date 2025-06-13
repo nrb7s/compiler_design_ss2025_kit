@@ -281,7 +281,11 @@ public class GraphConstructor {
             }
             return;
         } else if (stmt instanceof DeclarationTree decl) {
-            // Do Nothing, just SSA setup
+            if (decl.initializer() != null) {
+                Node initVal = buildExpr(decl.initializer());
+                Name varName = decl.name().name();
+                writeVariable(varName, currentBlock(), initVal);
+            }
         } else if (stmt instanceof AssignmentTree assign) {
             Node value = buildExpr(assign.expression());
             Name var = extractName(assign.lValue());
