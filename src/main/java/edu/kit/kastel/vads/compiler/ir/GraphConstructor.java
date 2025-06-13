@@ -462,6 +462,12 @@ public class GraphConstructor {
                 currentBlock.addNode(n);
                 return n;
             }
+            case BooleanLiteralTree bl -> {
+                // represent true==1, false==0
+                Node c = newConstInt(bl.value() ? 1 : 0);
+                currentBlock.addNode(c);
+                return c;
+            }
             case BinaryOperationTree bin -> {
                 Node left = buildExpr(bin.lhs());
                 Node right = buildExpr(bin.rhs());

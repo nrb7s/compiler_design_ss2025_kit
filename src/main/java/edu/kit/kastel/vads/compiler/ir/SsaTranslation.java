@@ -431,5 +431,15 @@ public class SsaTranslation {
             exprStmt.expr().accept(this, data);
             return NOT_AN_EXPRESSION;
         }
+
+        @Override
+        public Optional<Node> visit(BooleanLiteralTree boolLit, SsaTranslation data) {
+            pushSpan(boolLit);
+            // map `true` ↦ 1, `false` ↦ 0
+            int v = boolLit.value() ? 1 : 0;
+            Node n = data.constructor.newConstInt(v);
+            popSpan();
+            return Optional.of(n);
+        }
     }
 }

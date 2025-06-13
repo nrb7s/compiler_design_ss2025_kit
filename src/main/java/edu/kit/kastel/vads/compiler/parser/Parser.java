@@ -411,6 +411,18 @@ public class Parser {
                 this.tokenSource.consume();
                 yield new LiteralTree(value, base, span);
             }
+            case Keyword(var kw, var span) when kw == KeywordType.TRUE -> {
+                consume();
+                yield new BooleanLiteralTree(true, span);
+            }
+            case Keyword(var kw, var span) when kw == KeywordType.FALSE -> {
+                consume();
+                yield new BooleanLiteralTree(false, span);
+            }
+            case Keyword(var kw, var span) when kw == KeywordType.NULL -> {
+                consume();
+                yield new LiteralTree("NULL", 10, span);
+            }
             case Token t -> throw new ParseException("invalid factor " + t);
         };
     }

@@ -7,6 +7,7 @@ public sealed interface ExpressionTree extends Tree permits
         NegateTree,
         ConditionalTree,
         LogicalNotTree,
-        BitwiseNotTree
+        BitwiseNotTree,
+        BooleanLiteralTree
 {
 }
