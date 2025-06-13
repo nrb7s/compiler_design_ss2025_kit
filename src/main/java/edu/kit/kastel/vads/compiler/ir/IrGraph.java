@@ -3,11 +3,7 @@ package edu.kit.kastel.vads.compiler.ir;
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
 
-import java.util.IdentityHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.SequencedSet;
-import java.util.Set;
+import java.util.*;
 
 public class IrGraph {
     private final Map<Node, SequencedSet<Node>> successors = new IdentityHashMap<>();
@@ -44,6 +40,28 @@ public class IrGraph {
 
     public Block endBlock() {
         return this.endBlock;
+    }
+
+    public List<Block> blocks() {
+        Set<Block> result = new LinkedHashSet<>();
+        Queue<Block> worklist = new ArrayDeque<>();
+
+        worklist.add(this.startBlock);
+
+        while (!worklist.isEmpty()) {
+            Block blk = worklist.poll();
+            if (!result.add(blk)) continue;
+
+            for (Node succ : this.successors(blk)) {
+                if (succ instanceof Block b) {
+                    worklist.add(b);
+                }
+            }
+        }
+
+        result.add(this.endBlock);
+
+        return new ArrayList<>(result);
     }
 
     /// {@return the name of this graph}

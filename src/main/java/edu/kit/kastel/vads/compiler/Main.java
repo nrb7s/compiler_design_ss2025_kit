@@ -1,9 +1,7 @@
 package edu.kit.kastel.vads.compiler;
 
 import edu.kit.kastel.vads.compiler.backend.aasm.CodeGenerator;
-import edu.kit.kastel.vads.compiler.ir.IrGraph;
-import edu.kit.kastel.vads.compiler.ir.PhiElimination;
-import edu.kit.kastel.vads.compiler.ir.SsaTranslation;
+import edu.kit.kastel.vads.compiler.ir.*;
 import edu.kit.kastel.vads.compiler.ir.optimize.LocalValueNumbering;
 import edu.kit.kastel.vads.compiler.ir.util.YCompPrinter;
 import edu.kit.kastel.vads.compiler.lexer.Lexer;
@@ -30,6 +28,16 @@ public class Main {
         Path output = Path.of(args[1]);
         output = Path.of(output.toString() + ".s"); // duck
         ProgramTree program = lexAndParse(input);
+
+        // introduce elaborator
+        List<FunctionTree> newFuncs = new ArrayList<>();
+        for (FunctionTree f : program.topLevelTrees()) {
+            newFuncs.add(Elaborator.elaborate(f));
+        }
+        program = new ProgramTree(newFuncs);
+        // debug
+        System.out.println("DEBUG: elaborated program = " + program);
+
         try {
             new SemanticAnalysis(program).analyze();
         } catch (SemanticException e) {
@@ -56,8 +64,9 @@ public class Main {
 
         List<IrGraph> graphs = new ArrayList<>();
         for (FunctionTree function : program.topLevelTrees()) {
-            SsaTranslation translation = new SsaTranslation(function, new LocalValueNumbering());
-            IrGraph g = translation.translate();
+            // SsaTranslation translation = new SsaTranslation(function, new LocalValueNumbering());
+            // IrGraph g = translation.translate();
+            IrGraph g = GraphConstructor.build(function);
             PhiElimination.run(g); // phi eliminate
 
             // debug dump

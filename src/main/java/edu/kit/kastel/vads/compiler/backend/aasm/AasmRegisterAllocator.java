@@ -9,7 +9,10 @@ import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
 import edu.kit.kastel.vads.compiler.ir.node.StartNode;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class AasmRegisterAllocator implements RegisterAllocator {
     private int id;
@@ -17,43 +20,16 @@ public class AasmRegisterAllocator implements RegisterAllocator {
 
     @Override
     public Map<Node, Register> allocateRegisters(IrGraph graph) {
-        this.id = 0;
-        this.registers.clear();
-        for (Block block : getAllBlocks(graph)) {
+        int id = 0;
+        for (Block block : graph.blocks()) {
             for (Node node : block.nodes()) {
                 if (needsRegister(node)) {
-                    this.registers.put(node, new VirtualRegister(this.id++));
+                    this.registers.put(node, new VirtualRegister(id++));
                 }
             }
         }
         return Map.copyOf(this.registers);
     }
-
-    private Set<Block> getAllBlocks(IrGraph graph) {
-        Set<Block> all = new HashSet<>();
-        Deque<Block> queue = new ArrayDeque<>();
-        queue.add(graph.startBlock());
-        while (!queue.isEmpty()) {
-            Block block = queue.poll();
-            if (all.add(block)) {
-                for (Block succ : block.cfgSuccessors()) {
-                    queue.add(succ);
-                }
-            }
-        }
-        return all;
-    }
-
-    /*
-    @Override
-    public Map<Node, Register> allocateRegisters(IrGraph graph) {
-        Set<Node> visited = new HashSet<>();
-        visited.add(graph.endBlock());
-        scan(graph.endBlock(), visited);
-        return Map.copyOf(this.registers);
-    }
-
-     */
 
     private void scan(Node node, Set<Node> visited) {
         for (Node predecessor : node.predecessors()) {

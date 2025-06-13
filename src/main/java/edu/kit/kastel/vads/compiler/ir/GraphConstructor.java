@@ -2,6 +2,7 @@ package edu.kit.kastel.vads.compiler.ir;
 
 import edu.kit.kastel.vads.compiler.ir.node.*;
 import edu.kit.kastel.vads.compiler.ir.optimize.Optimizer;
+import edu.kit.kastel.vads.compiler.lexer.Operator;
 import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import org.jspecify.annotations.Nullable;
@@ -11,7 +12,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-class GraphConstructor {
+public class GraphConstructor {
 
     private final Optimizer optimizer;
     private final IrGraph graph;
@@ -245,6 +246,8 @@ class GraphConstructor {
 
     // L2: AST -> IR
     public static IrGraph build(FunctionTree function) {
+        // debug
+        System.out.println("DEBUG: building IR for " + function.name() + ", body=" + function.body());
         Optimizer optimizer = new Optimizer() {
             @Override
             public Node transform(Node n) { return n; }
@@ -255,10 +258,13 @@ class GraphConstructor {
     }
 
     private void buildBody(StatementTree stmt) {
+        System.out.println("DEBUG: buildBody got " + stmt.getClass() + " " + stmt);
         if (stmt instanceof BlockTree block) {
+            System.out.println("DEBUG: BlockTree with " + block.statements().size() + " statements");
             for (StatementTree s : block.statements()) {
                 buildBody(s);
             }
+            return;
         } else if (stmt instanceof DeclarationTree decl) {
             // Do Nothing, just SSA setup
         } else if (stmt instanceof AssignmentTree assign) {
@@ -282,6 +288,8 @@ class GraphConstructor {
         } else if (stmt instanceof IfTree ifTree) {
             buildIf(ifTree);
         } else if (stmt instanceof WhileLoopTree whileTree) {
+            // debug
+            System.out.println("DEBUG: building while, cond=" + whileTree.condition());
             buildWhile(whileTree);
         } else if (stmt instanceof ForLoopTree forTree) {
             buildFor(forTree);
@@ -401,6 +409,8 @@ class GraphConstructor {
     }
 
     private Node buildExpr(ExpressionTree expr) {
+        // debug
+        System.out.println("DEBUG: buildExpr: " + expr.getClass() + " : " + expr);
         switch (expr) {
             case LiteralTree lit -> {
                 // int only

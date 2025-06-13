@@ -62,79 +62,31 @@ public class CodeGenerator {
         return builder.toString();
     }
 
-    private void generateAssemblyForGraph(IrGraph graph, StringBuilder builder, Map<Node, Register> registers, Map<Integer, Integer> spillOffset) {
+    private void generateAssemblyForGraph(IrGraph graph, StringBuilder builder, Map<Node, Register> registers, Map<Integer,Integer> spillOffset) {
         Set<Block> visited = new HashSet<>();
-        Deque<Block> worklist = new ArrayDeque<>();
-        worklist.add(graph.startBlock());
+        Queue<Block> queue = new ArrayDeque<>();
 
-        while (!worklist.isEmpty()) {
-            Block block = worklist.poll();
+        Block start = graph.startBlock();
+        queue.add(start);
+
+        while (!queue.isEmpty()) {
+            Block block = queue.poll();
             if (!visited.add(block)) continue;
 
-            if (block != graph.startBlock() && block != graph.endBlock()) {
-                builder.append(block.getLabel()).append(":\n");
-            }
+            builder.append("L").append(block.getId()).append(":\n");
 
             for (Node node : block.nodes()) {
                 scanAsm(node, builder, registers, spillOffset);
-            }
-
-            List<Node> nodes = block.nodes();
-            if (!nodes.isEmpty()) {
-                Node last = nodes.get(nodes.size() - 1);
-                boolean isReturn = last instanceof ReturnNode;
-                boolean isCondJump = last instanceof CondJumpNode;
-                if (!isReturn && !isCondJump && !block.cfgSuccessors().isEmpty()) {
-                    Block succ = block.cfgSuccessors().get(0);
-                    builder.append("\tjmp ").append(succ.getLabel()).append("\n");
-                }
-            }
-
-            for (Block succ : block.cfgSuccessors()) {
-                if (!visited.contains(succ)) {
-                    worklist.add(succ);
+                for (Node succ : graph.successors(node)) {
+                    if (succ instanceof Block) {
+                        queue.add((Block) succ);
+                    }
                 }
             }
         }
-    }
-
-    private List<Block> computeRPO(IrGraph graph) {
-        List<Block> order = new ArrayList<>();
-        Set<Block> seen = new HashSet<>();
-        dfsRPO(graph, graph.startBlock(), seen, order);
-        Collections.reverse(order);
-        return order;
-    }
-
-    private void dfsRPO(IrGraph graph, Block b, Set<Block> seen, List<Block> order) {
-        if (!seen.add(b)) return;
-        for (Node n : b.nodes()) {
-            for (Node succ : graph.successors(n)) {
-                Block succBlock = succ.block();
-                if (succBlock != null && succBlock != b) {
-                    dfsRPO(graph, succBlock, seen, order);
-                }
-            }
-        }
-        order.add(b);
-    }
-
-
-    private void dfsBlocks(Block block, Set<Block> visited, List<Block> order) {
-        if (!visited.add(block)) return;
-        for (Block succ : block.cfgSuccessors()) {
-            dfsBlocks(succ, visited, order);
-        }
-        order.add(block);
     }
 
     private void scanAsm(Node node, StringBuilder builder, Map<Node, Register> registers, Map<Integer,Integer> spillOffset) {
-        /*for (Node predecessor : node.predecessors()) {
-            if (visited.add(predecessor)) {
-                scanAsm(predecessor, visited, builder, registers, spillOffset);
-            }
-        }
-         */
 
         switch (node) {
             case AddNode add -> binaryAsm(builder, registers, add, "addl", spillOffset);
@@ -170,10 +122,9 @@ public class CodeGenerator {
             case CondJumpNode cj -> {
                 String condReg = regAllocate(cj.condition(), registers, spillOffset);
                 builder.append("\tcmpl $0, ").append(condReg).append("\n")
-                        .append("\tjne ").append(cj.trueTarget().getLabel()).append("\n")
-                        .append("\tjmp ").append(cj.falseTarget().getLabel()).append("\n");
+                        .append("\tjne L").append(cj.trueTarget().getId()).append("\n")
+                        .append("\tjmp L").append(cj.falseTarget().getId()).append("\n");
             }
-
             case PhiElimination.CopyNode copy -> {
                 String src = regAllocate(
                         predecessorSkipProj(copy, PhiElimination.CopyNode.SRC),
@@ -344,12 +295,9 @@ public class CodeGenerator {
 
     private static String regAllocate(Node node, Map<Node, Register> registers, Map<Integer,Integer> spillOffset) {
         Register r = registers.get(node);
-        // debug
         if (r == null) {
-            System.err.println("Codegen: Node has no register: " + node + " in block " + (node.block() != null ? node.block().getId() : "null"));
-            throw new RuntimeException("No register for node: " + node + " in block " + (node.block() != null ? node.block().getId() : "null"));
+            System.err.println("No register for node: " + node + " (" + node.getClass() + ")");
         }
-        // ends
         int id = ((VirtualRegister) r).id();
         if (id < PHYS_REG_COUNT) {
             return PHYS_REGS[id];
