@@ -278,6 +278,7 @@ public class GraphConstructor {
             System.out.println("DEBUG: BlockTree with " + block.statements().size() + " statements");
             for (StatementTree s : block.statements()) {
                 buildBody(s);
+                if (currentBlock == null) { break;}
             }
             return;
         } else if (stmt instanceof DeclarationTree decl) {
