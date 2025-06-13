@@ -36,7 +36,7 @@ public class Main {
         }
         program = new ProgramTree(newFuncs);
         // debug
-        System.out.println("DEBUG: elaborated program = " + program);
+        // System.out.println("DEBUG: elaborated program = " + program);
 
         try {
             new SemanticAnalysis(program).analyze();

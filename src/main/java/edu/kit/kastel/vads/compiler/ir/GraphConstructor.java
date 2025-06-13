@@ -262,7 +262,7 @@ public class GraphConstructor {
     // L2: AST -> IR
     public static IrGraph build(FunctionTree function) {
         // debug
-        System.out.println("DEBUG: building IR for " + function.name() + ", body=" + function.body());
+        // System.out.println("DEBUG: building IR for " + function.name() + ", body=" + function.body());
         Optimizer optimizer = new Optimizer() {
             @Override
             public Node transform(Node n) { return n; }
@@ -273,9 +273,9 @@ public class GraphConstructor {
     }
 
     private void buildBody(StatementTree stmt) {
-        System.out.println("DEBUG: buildBody got " + stmt.getClass() + " " + stmt);
+        // System.out.println("DEBUG: buildBody got " + stmt.getClass() + " " + stmt);
         if (stmt instanceof BlockTree block) {
-            System.out.println("DEBUG: BlockTree with " + block.statements().size() + " statements");
+            // System.out.println("DEBUG: BlockTree with " + block.statements().size() + " statements");
             for (StatementTree s : block.statements()) {
                 buildBody(s);
                 if (currentBlock == null) { break;}
@@ -309,7 +309,7 @@ public class GraphConstructor {
             buildIf(ifTree);
         } else if (stmt instanceof WhileLoopTree whileTree) {
             // debug
-            System.out.println("DEBUG: building while, cond=" + whileTree.condition());
+            // System.out.println("DEBUG: building while, cond=" + whileTree.condition());
             buildWhile(whileTree);
         } else if (stmt instanceof ForLoopTree forTree) {
             buildFor(forTree);
@@ -430,7 +430,7 @@ public class GraphConstructor {
 
     private Node buildExpr(ExpressionTree expr) {
         // debug
-        System.out.println("DEBUG: buildExpr: " + expr.getClass() + " : " + expr);
+        // System.out.println("DEBUG: buildExpr: " + expr.getClass() + " : " + expr);
         switch (expr) {
             case LiteralTree lit -> {
                 final int value;
