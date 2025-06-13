@@ -49,6 +49,9 @@ public class CodeGenerator {
                         .append(totalSpillBytes)
                         .append(", %esp\n");
             }
+            List<Block> blocks = graph.blocks();
+            Block entry = blocks.get(0);
+            builder.append("\tjmp L").append(entry.getId()).append("\n");
 
             generateAssemblyForGraph(graph, builder, registers, spillOffset);
 
@@ -62,26 +65,40 @@ public class CodeGenerator {
         return builder.toString();
     }
 
-    private void generateAssemblyForGraph(IrGraph graph, StringBuilder builder, Map<Node, Register> registers, Map<Integer,Integer> spillOffset) {
+    private void generateAssemblyForGraph(IrGraph graph,
+                                          StringBuilder b,
+                                          Map<Node,Register> regs,
+                                          Map<Integer,Integer> spill) {
         Set<Block> visited = new HashSet<>();
-        Queue<Block> queue = new ArrayDeque<>();
+        Deque<Block> work  = new ArrayDeque<>();
+        work.add(graph.startBlock());
 
-        Block start = graph.startBlock();
-        queue.add(start);
+        while (!work.isEmpty()) {
+            Block blk = work.remove();
+            if (!visited.add(blk)) continue;
 
-        while (!queue.isEmpty()) {
-            Block block = queue.poll();
-            if (!visited.add(block)) continue;
+            // emit the label
+            b.append("L").append(blk.getId()).append(":\n");
 
-            builder.append("L").append(block.getId()).append(":\n");
+            // emit every IR-node in that block
+            for (Node n : blk.nodes()) {
+                scanAsm(n, b, regs, spill);
+            }
 
-            for (Node node : block.nodes()) {
-                scanAsm(node, builder, registers, spillOffset);
-                for (Node succ : graph.successors(node)) {
-                    if (succ instanceof Block) {
-                        queue.add((Block) succ);
-                    }
+            List<Node> nodes = blk.nodes();
+            if (!nodes.isEmpty()) {
+                Node last = nodes.get(nodes.size() - 1);
+                boolean isReturn = last instanceof ReturnNode;
+                boolean isCondJump = last instanceof CondJumpNode;
+                if (!isReturn && !isCondJump && !blk.cfgSuccessors().isEmpty()) {
+                    Block succ = blk.cfgSuccessors().get(0);
+                    b.append("\tjmp L").append(succ.getId()).append("\n");
                 }
+            }
+
+            // now follow _cfg_ successors, not dataflow successors of the node
+            for (Block succ : blk.cfgSuccessors()) {
+                work.add(succ);
             }
         }
     }
@@ -144,6 +161,10 @@ public class CodeGenerator {
                 builder.append("\tmovl ")
                         .append(regAllocate(res, registers, spillOffset))
                         .append(", %eax\n");
+                builder.append("\tmov %rbp, %rsp\n")
+                        .append("\tpop %rbp\n")
+                        .append("\tret\n");
+                return;
             }
             case ConstIntNode c -> {
                 String dest = regAllocate(c, registers, spillOffset);

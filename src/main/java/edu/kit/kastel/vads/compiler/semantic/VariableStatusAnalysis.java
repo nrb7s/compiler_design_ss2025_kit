@@ -161,4 +161,9 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
         bitwiseNotTree.operand().accept(this, data);
         return NoOpVisitor.super.visit(bitwiseNotTree, data);
     }
+
+    @Override
+    public Unit visit(BooleanLiteralTree boolLit, Namespace<VariableStatus> data) {
+        return NoOpVisitor.super.visit(boolLit, data);
+    }
 }

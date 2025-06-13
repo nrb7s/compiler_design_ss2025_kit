@@ -83,4 +83,10 @@ public class IntegerLiteralRangeAnalysis implements NoOpVisitor<Namespace<Void>>
         expressionStatementTree.expr().accept(this, data);
         return NoOpVisitor.super.visit(expressionStatementTree, data);
     }
+
+    @Override
+    public Unit visit(BooleanLiteralTree boolLit, Namespace<Void> data) {
+        return NoOpVisitor.super.visit(boolLit, data);
+    }
+
 }

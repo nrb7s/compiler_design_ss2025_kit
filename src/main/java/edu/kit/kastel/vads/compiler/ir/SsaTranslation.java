@@ -211,9 +211,11 @@ public class SsaTranslation {
             pushSpan(returnTree);
             Node node = returnTree.expression().accept(this, data).orElseThrow();
             Node ret = data.constructor.newReturn(node);
-            data.constructor.graph().endBlock().addPredecessor(ret);
+            data.constructor.graph().registerSuccessor(data.currentBlock(), ret);
+            data.currentBlock().addNode(ret);
+            data.setCurrentBlock(null);
             popSpan();
-            return NOT_AN_EXPRESSION;
+            return Optional.empty();
         }
 
         @Override
