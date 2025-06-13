@@ -21,22 +21,14 @@ public class AasmRegisterAllocator implements RegisterAllocator {
     @Override
     public Map<Node, Register> allocateRegisters(IrGraph graph) {
         int id = 0;
-        Map<Node, Register> registers = new HashMap<>();
-        Set<Node> allNodes = new HashSet<>();
+        this.registers.clear();
+        Set<Node> visited = new HashSet<>();
         for (Block block : graph.blocks()) {
             for (Node node : block.nodes()) {
-                if (needsRegister(node)) {
-                    registers.put(node, new VirtualRegister(id++));
-                }
+                scan(node, visited);
             }
         }
-        for (Node node : allNodes) {
-            if (needsRegister(node) && !registers.containsKey(node)) {
-                System.out.println("Warning: node not assigned register: " + node + " in block "
-                        + ((node.block() != null) ? node.block().getId() : "unknown"));
-            }
-        }
-        return Map.copyOf(registers);
+        return Map.copyOf(this.registers);
     }
 
     private void scan(Node node, Set<Node> visited) {

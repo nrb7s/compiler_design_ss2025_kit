@@ -347,9 +347,12 @@ public class CodeGenerator {
         String rhs = regAllocate(predecessorSkipProj(cmp, BinaryOperationNode.RIGHT), regs, spill);
         String dst = regAllocate(cmp, regs, spill);
 
-        // cmp lhs, rhs   ->  setX %al   -> movzx %al, dst
-        b.append("\tcmpl ").append(rhs).append(", ").append(lhs).append("\n")
-                .append("\t").append(setInstr).append(" %al\n");
+        if (isMemory(lhs) && isMemory(rhs)) {
+            b.append("\tmovl ").append(rhs).append(", %esi\n"); // 用临时寄存器
+            b.append("\tcmpl %esi, ").append(lhs).append("\n");
+        } else {
+            b.append("\tcmpl ").append(rhs).append(", ").append(lhs).append("\n");
+        }
 
         if (isMemory(dst)) {
             b.append("\tmovzbl %al, ").append(TEMP_REG_1).append("\n")
