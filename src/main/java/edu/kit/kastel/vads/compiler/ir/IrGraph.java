@@ -52,10 +52,8 @@ public class IrGraph {
             Block blk = worklist.poll();
             if (!result.add(blk)) continue;
 
-            for (Node succ : this.successors(blk)) {
-                if (succ instanceof Block b) {
-                    worklist.add(b);
-                }
+            for (Block succ : blk.cfgSuccessors()) {
+                worklist.add(succ);
             }
         }
 

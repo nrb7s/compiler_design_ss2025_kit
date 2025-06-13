@@ -37,22 +37,35 @@ public class GraphConstructor {
     }
 
     public Node newAdd(Node left, Node right) {
-        return this.optimizer.transform(new AddNode(currentBlock(), left, right));
+        AddNode n = new AddNode(currentBlock(), left, right);
+        currentBlock().addNode(n);
+        return optimizer.transform(n);
     }
+
     public Node newSub(Node left, Node right) {
-        return this.optimizer.transform(new SubNode(currentBlock(), left, right));
+        SubNode n = new SubNode(currentBlock(), left, right);
+        currentBlock().addNode(n);
+        return optimizer.transform(n);
     }
 
     public Node newMul(Node left, Node right) {
-        return this.optimizer.transform(new MulNode(currentBlock(), left, right));
+        MulNode n = new MulNode(currentBlock(), left, right);
+        currentBlock().addNode(n);
+        return optimizer.transform(n);
     }
 
     public Node newDiv(Node left, Node right) {
-        return this.optimizer.transform(new DivNode(currentBlock(), left, right, readCurrentSideEffect()));
+        DivNode n = new DivNode(currentBlock(), left, right,
+                readCurrentSideEffect());
+        currentBlock().addNode(n);
+        return optimizer.transform(n);
     }
 
     public Node newMod(Node left, Node right) {
-        return this.optimizer.transform(new ModNode(currentBlock(), left, right, readCurrentSideEffect()));
+        ModNode n = new ModNode(currentBlock(), left, right,
+                readCurrentSideEffect());
+        currentBlock().addNode(n);
+        return optimizer.transform(n);
     }
 
     public Node newReturn(Node result) {
