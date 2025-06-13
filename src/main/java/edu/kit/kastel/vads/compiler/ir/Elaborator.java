@@ -61,7 +61,7 @@ public final class Elaborator {
 
         WhileLoopTree whileLoop = new WhileLoopTree(
                 cond == null
-                        ? new LiteralTree("true", 0, Span.DUMMY)
+                        ? new BooleanLiteralTree(true, Span.DUMMY)
                         : elaborateExpr(cond),
                 loopBody
         );
@@ -107,12 +107,12 @@ public final class Elaborator {
                     new ConditionalTree(
                             elaborateExpr(bin.lhs()),
                             elaborateExpr(bin.rhs()),
-                            new LiteralTree("false", 0, Span.DUMMY)
+                            new BooleanLiteralTree(false, Span.DUMMY)
                     );
             case BinaryOperationTree bin when bin.operatorType() == OperatorType.OROR ->
                     new ConditionalTree(
                             elaborateExpr(bin.lhs()),
-                            new LiteralTree("true", 0, Span.DUMMY),
+                            new BooleanLiteralTree(true, Span.DUMMY),
                             elaborateExpr(bin.rhs())
                     );
             case BinaryOperationTree bin ->
