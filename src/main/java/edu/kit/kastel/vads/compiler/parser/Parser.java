@@ -71,7 +71,8 @@ public class Parser {
     }
 
     private StatementTree parseStatement() { // update for control structure
-        if (tokenSource.peek().isKeyword(KeywordType.INT)) {
+        if (tokenSource.peek().isKeyword(KeywordType.INT) ||
+                tokenSource.peek().isKeyword(KeywordType.BOOL)) {
             StatementTree decl = parseDeclaration();
             tokenSource.expectSeparator(SeparatorType.SEMICOLON);
             return decl;
@@ -165,14 +166,24 @@ public class Parser {
     // End L2
 
     private StatementTree parseDeclaration() {
-        Keyword type = this.tokenSource.expectKeyword(KeywordType.INT);
-        Identifier ident = this.tokenSource.expectIdentifier();
-        ExpressionTree expr = null;
-        if (this.tokenSource.peek().isOperator(OperatorType.ASSIGN)) {
-            this.tokenSource.expectOperator(OperatorType.ASSIGN);
-            expr = parseExpression();
+        Keyword kw = tokenSource.peek().isKeyword(KeywordType.INT)
+                ? tokenSource.expectKeyword(KeywordType.INT)
+                : tokenSource.expectKeyword(KeywordType.BOOL);
+        BasicType type = kw.type() == KeywordType.INT
+                ? BasicType.INT
+                : BasicType.BOOL;
+        Identifier id = tokenSource.expectIdentifier();
+        ExpressionTree init = null;
+        if (tokenSource.peek() instanceof Operator op
+                && op.type() == OperatorType.ASSIGN) {
+            tokenSource.consume();
+            init = parseExpression();
         }
-        return new DeclarationTree(new TypeTree(BasicType.INT, type.span()), name(ident), expr);
+        return new DeclarationTree(
+                new TypeTree(type, kw.span()),
+                name(id),
+                init
+        );
     }
 
     private StatementTree parseSimple() {
