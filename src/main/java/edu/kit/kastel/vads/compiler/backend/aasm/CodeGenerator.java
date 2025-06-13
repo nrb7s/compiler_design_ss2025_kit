@@ -74,6 +74,7 @@ public class CodeGenerator {
         work.add(graph.startBlock());
 
         // debug
+        /*
         System.out.println("IR blocks: ");
         for (Block blk : graph.blocks()) {
             System.out.println("Block L" + blk.getId() + ":");
@@ -81,6 +82,7 @@ public class CodeGenerator {
                 System.out.println("   " + n + " (" + n.getClass().getSimpleName() + ")");
             }
         }
+         */
         // ends
 
         while (!work.isEmpty()) {

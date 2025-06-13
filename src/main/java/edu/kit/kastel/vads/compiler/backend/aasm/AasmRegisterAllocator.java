@@ -32,13 +32,12 @@ public class AasmRegisterAllocator implements RegisterAllocator {
     }
 
     private void scan(Node node, Set<Node> visited) {
+        if (!visited.add(node)) return;
         for (Node predecessor : node.predecessors()) {
-            if (visited.add(predecessor)) {
-                scan(predecessor, visited);
-            }
+            scan(predecessor, visited);
         }
-        if (needsRegister(node)) {
-            this.registers.put(node, new VirtualRegister(this.id++));
+        if (needsRegister(node) && !registers.containsKey(node)) {
+            registers.put(node, new VirtualRegister(this.id++));
         }
     }
 
