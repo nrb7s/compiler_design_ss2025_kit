@@ -42,6 +42,7 @@ public final class Elaborator {
                     elaborateExpr(assign.expression())
             );
             case DeclarationTree decl -> elaborateDecl(decl);
+            case ExpressionStatementTree exprStmt -> null;
             default -> stmt;
         };
     }
@@ -92,6 +93,7 @@ public final class Elaborator {
         List<StatementTree> stmts = new ArrayList<>();
         for (StatementTree s : block.statements()) {
             StatementTree elaborated = elaborateStmt(s);
+            if (elaborated == null) continue;
             if (elaborated instanceof BlockTree b) {
                 stmts.addAll(b.statements());
             } else {

@@ -150,7 +150,7 @@ public class GraphConstructor {
 
     public Node newBitwiseNot(Node operand) {
         BitwiseNotNode node = new BitwiseNotNode(currentBlock(), operand);
-        currentBlock.addNode(node);
+        currentBlock().addNode(node);
         return this.optimizer.transform(node);
     }
 
@@ -277,8 +277,8 @@ public class GraphConstructor {
         if (stmt instanceof BlockTree block) {
             // System.out.println("DEBUG: BlockTree with " + block.statements().size() + " statements");
             for (StatementTree s : block.statements()) {
-                buildBody(s);
                 if (currentBlock == null) { break;}
+                buildBody(s);
             }
             return;
         } else if (stmt instanceof DeclarationTree decl) {
@@ -317,7 +317,7 @@ public class GraphConstructor {
             Node value = buildExpr(ret.expression());
             Node retNode = newReturn(value);
             graph.registerSuccessor(currentBlock, retNode);
-            currentBlock.addNode(retNode);
+            currentBlock().addNode(retNode);
             // No more code should be generated in this block after return
             currentBlock = null;
         } else if (stmt instanceof ContinueTree || stmt instanceof BreakTree) {
@@ -335,19 +335,19 @@ public class GraphConstructor {
         Node condValue = buildExpr(ifTree.condition());
         // Condition jump: If condValue != 0 goto thenBlock else elseBlock
         Node branchNode = new CondJumpNode(currentBlock, condValue, thenBlock, elseBlock);
-        currentBlock.addNode(branchNode);
+        currentBlock().addNode(branchNode);
         graph.registerSuccessor(currentBlock, branchNode);
 
         // CFG for L2
-        currentBlock.addCfgSuccessor(thenBlock);
-        currentBlock.addCfgSuccessor(elseBlock);
+        currentBlock().addCfgSuccessor(thenBlock);
+        currentBlock().addCfgSuccessor(elseBlock);
 
         // Then branch
         currentBlock = thenBlock;
         buildBody(ifTree.thenBranch());
         if (currentBlock != null) { // block might be null if ended by return
             graph.registerSuccessor(currentBlock, afterBlock);
-            currentBlock.addCfgSuccessor(afterBlock);
+            currentBlock().addCfgSuccessor(afterBlock);
         }
 
         // Else branch
@@ -356,7 +356,7 @@ public class GraphConstructor {
             buildBody(ifTree.elseBranch());
             if (currentBlock != null) {
                 graph.registerSuccessor(currentBlock, afterBlock);
-                currentBlock.addCfgSuccessor(afterBlock);
+                currentBlock().addCfgSuccessor(afterBlock);
             }
         }
         // Continue in afterBlock
@@ -369,16 +369,17 @@ public class GraphConstructor {
         Block afterBlock = new Block(graph);
 
         // Jump to cond block
+        currentBlock().addCfgSuccessor(condBlock);
         graph.registerSuccessor(currentBlock, condBlock);
         currentBlock = condBlock;
 
         Node condValue = buildExpr(whileTree.condition());
         Node condJump = new CondJumpNode(currentBlock, condValue, bodyBlock, afterBlock);
-        currentBlock.addNode(condJump);
+        currentBlock().addNode(condJump);
         graph.registerSuccessor(currentBlock, condJump);
 
-        currentBlock.addCfgSuccessor(bodyBlock);
-        currentBlock.addCfgSuccessor(afterBlock);
+        currentBlock().addCfgSuccessor(bodyBlock);
+        currentBlock().addCfgSuccessor(afterBlock);
 
         // Body
         currentBlock = bodyBlock;
@@ -386,7 +387,7 @@ public class GraphConstructor {
         if (currentBlock != null) {
             // Loop back to cond block
             graph.registerSuccessor(currentBlock, condBlock);
-            currentBlock.addCfgSuccessor(condBlock);
+            currentBlock().addCfgSuccessor(condBlock);
         }
         // Continue in after block
         currentBlock = afterBlock;
@@ -402,28 +403,28 @@ public class GraphConstructor {
         if (forTree.init() != null)
             buildBody(forTree.init());
         graph.registerSuccessor(currentBlock, condBlock);
-        currentBlock.addCfgSuccessor(condBlock);
+        currentBlock().addCfgSuccessor(condBlock);
         currentBlock = condBlock;
 
         Node condValue = buildExpr(forTree.condition());
         Node condJump = new CondJumpNode(currentBlock, condValue, bodyBlock, afterBlock);
-        currentBlock.addNode(condJump);
+        currentBlock().addNode(condJump);
         graph.registerSuccessor(currentBlock, condJump);
-        currentBlock.addCfgSuccessor(bodyBlock);
-        currentBlock.addCfgSuccessor(afterBlock);
+        currentBlock().addCfgSuccessor(bodyBlock);
+        currentBlock().addCfgSuccessor(afterBlock);
 
         currentBlock = bodyBlock;
         buildBody(forTree.body());
         if (currentBlock != null) {
             graph.registerSuccessor(currentBlock, stepBlock);
-            currentBlock.addCfgSuccessor(stepBlock);
+            currentBlock().addCfgSuccessor(stepBlock);
         }
 
         currentBlock = stepBlock;
         if (forTree.step() != null)
             buildBody(forTree.step());
         graph.registerSuccessor(currentBlock, condBlock);
-        currentBlock.addCfgSuccessor(condBlock);
+        currentBlock().addCfgSuccessor(condBlock);
 
         currentBlock = afterBlock;
     }
@@ -459,13 +460,13 @@ public class GraphConstructor {
             case NegateTree neg -> {
                 Node operand = buildExpr(neg.expression());
                 Node n = newSub(newConstInt(0), operand);
-                currentBlock.addNode(n);
+                currentBlock().addNode(n);
                 return n;
             }
             case BooleanLiteralTree bl -> {
                 // represent true==1, false==0
                 Node c = newConstInt(bl.value() ? 1 : 0);
-                currentBlock.addNode(c);
+                currentBlock().addNode(c);
                 return c;
             }
             case BinaryOperationTree bin -> {
@@ -503,7 +504,7 @@ public class GraphConstructor {
                     case NE    -> newCmpNE(left, right);   // !=
                     default -> throw new UnsupportedOperationException("Unknown binary op: " + bin.operatorType());
                 };
-                currentBlock.addNode(n);
+                currentBlock().addNode(n);
                 return n;
             }
             case ConditionalTree cond -> {
@@ -514,19 +515,19 @@ public class GraphConstructor {
 
                 Node condValue = buildExpr(cond.condition());
                 Node branchNode = new CondJumpNode(currentBlock, condValue, thenBlock, elseBlock);
-                currentBlock.addNode(branchNode);
+                currentBlock().addNode(branchNode);
                 graph.registerSuccessor(currentBlock, branchNode);
 
                 // Then branch
                 currentBlock = thenBlock;
                 Node thenResult = buildExpr(cond.thenExpr());
-                currentBlock.addNode(thenResult);
+                currentBlock().addNode(thenResult);
                 graph.registerSuccessor(currentBlock, afterBlock);
 
                 // Else branch
                 currentBlock = elseBlock;
                 Node elseResult = buildExpr(cond.elseExpr());
-                currentBlock.addNode(elseResult);
+                currentBlock().addNode(elseResult);
                 graph.registerSuccessor(currentBlock, afterBlock);
 
                 // Merge with Phi
@@ -534,7 +535,7 @@ public class GraphConstructor {
                 Phi phi = new Phi(currentBlock);
                 phi.appendOperand(thenResult);
                 phi.appendOperand(elseResult);
-                currentBlock.addNode(phi);
+                currentBlock().addNode(phi);
                 return phi;
             }
             case null, default -> throw new UnsupportedOperationException("Unknown ExpressionTree: " + expr);

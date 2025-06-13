@@ -73,6 +73,16 @@ public class CodeGenerator {
         Deque<Block> work  = new ArrayDeque<>();
         work.add(graph.startBlock());
 
+        // debug
+        System.out.println("IR blocks: ");
+        for (Block blk : graph.blocks()) {
+            System.out.println("Block L" + blk.getId() + ":");
+            for (Node n : blk.nodes()) {
+                System.out.println("   " + n + " (" + n.getClass().getSimpleName() + ")");
+            }
+        }
+        // ends
+
         while (!work.isEmpty()) {
             Block blk = work.remove();
             if (!visited.add(blk)) continue;
