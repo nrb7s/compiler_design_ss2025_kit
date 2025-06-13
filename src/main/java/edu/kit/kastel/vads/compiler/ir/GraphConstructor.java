@@ -428,16 +428,22 @@ public class GraphConstructor {
         System.out.println("DEBUG: buildExpr: " + expr.getClass() + " : " + expr);
         switch (expr) {
             case LiteralTree lit -> {
-                // int only
-                int value = Integer.parseInt(lit.value());
+                final int value;
+                if (lit.base() == 16) {
+                    String digits = lit.value();
+                    if (digits.startsWith("0x") || digits.startsWith("0X")) {
+                        digits = digits.substring(2);
+                    }
+                    value = (int) Long.parseUnsignedLong(digits, 16);
+                } else {
+                    value = Integer.parseInt(lit.value());
+                }
                 Node n = newConstInt(value);
-                currentBlock.addNode(n);
                 return n;
             }
             case IdentExpressionTree ident -> {
                 Name name = ident.name().name(); // the name of NameTree
-
-                return readVariable(name, currentBlock()); // the name of NameTree
+                return readVariable(name, currentBlock());
             }
             case NegateTree neg -> {
                 Node operand = buildExpr(neg.expression());
