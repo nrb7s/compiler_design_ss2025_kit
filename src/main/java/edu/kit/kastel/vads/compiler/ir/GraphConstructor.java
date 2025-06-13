@@ -439,12 +439,18 @@ public class GraphConstructor {
                     if (digits.startsWith("0x") || digits.startsWith("0X")) {
                         digits = digits.substring(2);
                     }
-                    value = (int) Long.parseUnsignedLong(digits, 16);
+                    long v = Long.parseUnsignedLong(digits, 16);
+                    if ((v & ~0xFFFF_FFFFL) != 0)           // > 32-bit
+                        throw new NumberFormatException("hex literal out of 32-bit range: " + lit.value());
+                    value = (int) v;
                 } else {
-                    value = Integer.parseInt(lit.value());
+                    long v = Long.parseLong(lit.value());
+                    if (v < 0 || v > 2147483648L) {
+                        throw new NumberFormatException("decimal literal out of 32-bit range: " + lit.value());
+                    }
+                    value = (int) (v & 0xFFFF_FFFFL);
                 }
-                Node n = newConstInt(value);
-                return n;
+                return newConstInt(value);
             }
             case IdentExpressionTree ident -> {
                 Name name = ident.name().name(); // the name of NameTree

@@ -347,7 +347,7 @@ public class CodeGenerator {
         }
 
         b.append("\tandl $0x1F, %ecx\n");
-        b.append("\t").append(instr).append(" ").append(amt).append(", ").append(dst).append("\n");
+        b.append("\t").append(instr).append(" %cl, ").append(dst).append("\n");
     }
 
 
