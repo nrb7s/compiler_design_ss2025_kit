@@ -75,7 +75,9 @@ public class GraphConstructor {
     public Node newConstInt(int value) {
         // always move const into start block, this allows better deduplication
         // and resultingly in better value numbering
-        return this.optimizer.transform(new ConstIntNode(this.graph.startBlock(), value));
+        ConstIntNode c = new ConstIntNode(this.graph.startBlock(), value);
+        this.graph.startBlock().addNode(c);
+        return this.optimizer.transform(c);
     }
 
     public Node newSideEffectProj(Node node) {
