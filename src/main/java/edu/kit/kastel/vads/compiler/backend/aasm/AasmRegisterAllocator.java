@@ -20,7 +20,7 @@ public class AasmRegisterAllocator implements RegisterAllocator {
 
     @Override
     public Map<Node, Register> allocateRegisters(IrGraph graph) {
-        int id = 0;
+        this.id = 0;
         this.registers.clear();
         Set<Node> visited = new HashSet<>();
         for (Block block : graph.blocks()) {
