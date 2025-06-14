@@ -8,7 +8,8 @@ import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
 import edu.kit.kastel.vads.compiler.ir.node.StartNode;
-
+import edu.kit.kastel.vads.compiler.ir.PhiElimination;
+import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -36,12 +37,29 @@ public class AasmRegisterAllocator implements RegisterAllocator {
         for (Node predecessor : node.predecessors()) {
             scan(predecessor, visited);
         }
+        if (node instanceof PhiElimination.CopyNode copy) {
+            Node src = predecessorSkipProj(copy, PhiElimination.CopyNode.SRC);
+            Node dst = predecessorSkipProj(copy, PhiElimination.CopyNode.DST);
+            Register r = registers.get(src);
+            if (r == null) r = registers.get(dst);
+            if (r == null) r = new VirtualRegister(this.id++);
+            registers.put(src, r);
+            registers.put(dst, r);
+            // System.out.println("reg " + r + " for copy src=" + src + " dst=" + dst);
+            return;
+        }
         if (needsRegister(node) && !registers.containsKey(node)) {
-            registers.put(node, new VirtualRegister(this.id++));
+            Register r = new VirtualRegister(this.id++);
+            registers.put(node, r);
+            // System.out.println("reg " + r + " for node " + node);
         }
     }
 
     private static boolean needsRegister(Node node) {
-        return !(node instanceof ProjNode || node instanceof StartNode || node instanceof Block || node instanceof ReturnNode);
+        return !(node instanceof ProjNode
+                || node instanceof StartNode
+                || node instanceof Block
+                || node instanceof ReturnNode
+                || node instanceof PhiElimination.CopyNode);
     }
 }

@@ -186,15 +186,19 @@ public class GraphConstructor {
     }
 
     void writeVariable(Name variable, Block block, Node value) {
+        // System.out.println("WRITE " + variable.asString() + " in " + block.getId() + " -> " + value);
         this.currentDef.computeIfAbsent(variable, _ -> new HashMap<>()).put(block, value);
     }
 
     Node readVariable(Name variable, Block block) {
         Node node = this.currentDef.getOrDefault(variable, Map.of()).get(block);
         if (node != null) {
+            // System.out.println("READ " + variable.asString() + " in " + block.getId() + " -> " + node);
             return node;
         }
-        return readVariableRecursive(variable, block);
+        Node val = readVariableRecursive(variable, block);
+        // System.out.println("READ " + variable.asString() + " in " + block.getId() + " -> " + val);
+        return val;
     }
 
 
@@ -280,6 +284,15 @@ public class GraphConstructor {
         return readSideEffectRecursive(block);
     }
 
+    private void copyCurrentDefsTo(Block target) {
+        for (var entry : this.currentDef.entrySet()) {
+            Name n = entry.getKey();
+            Node val = readVariable(n, currentBlock());
+            entry.getValue().put(target, val);
+            // System.out.println("propagate " + n.asString() + " -> " + val + " to block " + target.getId());
+        }
+    }
+
     private Node readSideEffectRecursive(Block block) {
         Node val;
         if (!this.sealedBlocks.contains(block)) {
@@ -328,11 +341,15 @@ public class GraphConstructor {
             }
             return;
         } else if (stmt instanceof DeclarationTree decl) {
+            Name varName = decl.name().name();
+            Node initVal;
             if (decl.initializer() != null) {
-                Node initVal = buildExpr(decl.initializer());
-                Name varName = decl.name().name();
-                writeVariable(varName, currentBlock(), initVal);
+                initVal = buildExpr(decl.initializer());
+            } else {
+                initVal = newConstInt(0);
             }
+            // System.out.println("declare " + varName.asString() + " -> " + initVal);
+            writeVariable(varName, currentBlock(), initVal);
         } else if (stmt instanceof AssignmentTree assign) {
             Node value = buildExpr(assign.expression());
             Name var = extractName(assign.lValue());
@@ -452,6 +469,7 @@ public class GraphConstructor {
         // Jump to cond block
         currentBlock().addCfgSuccessor(condBlock);
         graph.registerSuccessor(currentBlock, condBlock);
+        copyCurrentDefsTo(condBlock);
         currentBlock = condBlock;
 
         Node condValue = buildExpr(whileTree.condition());
@@ -493,6 +511,7 @@ public class GraphConstructor {
             buildBody(forTree.init());
         graph.registerSuccessor(currentBlock, condBlock);
         currentBlock().addCfgSuccessor(condBlock);
+        copyCurrentDefsTo(condBlock);
         currentBlock = condBlock;
 
         Node condValue = buildExpr(forTree.condition());
