@@ -1,6 +1,12 @@
 int main() {
-  int a = 1;
-  int b = 2;
-  int c = 3;
-  return a + b * c < 10 ? 42 : 24;
+  int x = 0xFFAABBCC;
+
+  int y = x << 32;
+  int z = x >> 32;
+
+  if (x == y && x == z) {
+    return 50;
+  } else {
+    return -1;
+  }
 }

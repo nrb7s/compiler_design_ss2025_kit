@@ -584,15 +584,15 @@ public class GraphConstructor {
                     // L2
                     case LSHIFT   -> {                        // <<
                         if (bin.rhs() instanceof LiteralTree lit) {
-                            int amt = Integer.parseInt(lit.value()) & 0x1F;
-                            right   = newConstInt(amt);
+                            int amt = (int) lit.parseValue().orElseThrow();
+                            right   = newConstInt(amt & 0x1F);
                         }
                         yield newShl(left, right);
                     }
                     case RSHIFT   -> {                        // >>
                         if (bin.rhs() instanceof LiteralTree lit) {
-                            int amt = Integer.parseInt(lit.value()) & 0x1F;
-                            right   = newConstInt(amt);
+                            int amt = (int) lit.parseValue().orElseThrow();
+                            right   = newConstInt(amt & 0x1F);
                         }
                         yield newShr(left, right);
                     }
