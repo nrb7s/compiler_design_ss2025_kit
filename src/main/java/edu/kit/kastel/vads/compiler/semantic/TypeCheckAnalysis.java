@@ -7,6 +7,16 @@ import edu.kit.kastel.vads.compiler.parser.visitor.NoOpVisitor;
 import edu.kit.kastel.vads.compiler.parser.visitor.Unit;
 
 public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
+    private BasicType currentReturnType = BasicType.INT;
+
+    @Override
+    public Unit visit(FunctionTree functionTree, Namespace<BasicType> data) {
+        BasicType previous = currentReturnType;
+        currentReturnType = (BasicType) functionTree.returnType().type();
+        Unit ret = NoOpVisitor.super.visit(functionTree, data);
+        currentReturnType = previous;
+        return ret;
+    }
 
     @Override
     public Unit visit(DeclarationTree declarationTree, Namespace<BasicType> data) {
@@ -33,7 +43,11 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
 
     @Override
     public Unit visit(ReturnTree returnTree, Namespace<BasicType> data) {
-        expressionType(returnTree.expression(), data);
+        BasicType type = expressionType(returnTree.expression(), data);
+        if (type != currentReturnType) {
+            throw new SemanticException(
+                    "cannot return " + type.asString() + " from function returning " + currentReturnType.asString());
+        }
         return NoOpVisitor.super.visit(returnTree, data);
     }
 
