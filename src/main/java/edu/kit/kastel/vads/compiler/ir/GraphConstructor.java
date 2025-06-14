@@ -541,14 +541,14 @@ public class GraphConstructor {
                     case DIV -> newDiv(left, right);
                     case MOD -> newMod(left, right);
                     // L2
-                    case SHL   -> {                        // <<
+                    case LSHIFT   -> {                        // <<
                         if (bin.rhs() instanceof LiteralTree lit) {
                             int amt = Integer.parseInt(lit.value()) & 0x1F;
                             right   = newConstInt(amt);
                         }
                         yield newShl(left, right);
                     }
-                    case SHR   -> {                        // >>
+                    case RSHIFT   -> {                        // >>
                         if (bin.rhs() instanceof LiteralTree lit) {
                             int amt = Integer.parseInt(lit.value()) & 0x1F;
                             right   = newConstInt(amt);

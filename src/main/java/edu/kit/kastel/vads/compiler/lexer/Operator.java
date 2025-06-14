@@ -52,9 +52,7 @@ public record Operator(OperatorType type, Span span) implements Token {
         ASSIGN_OR("|="),
         ASSIGN_XOR("^="),
         QUESTION("?"),
-        COLON(":"),
-        SHL("<<"),
-        SHR(">>")
+        COLON(":")
         ;
 
         private final String value;
