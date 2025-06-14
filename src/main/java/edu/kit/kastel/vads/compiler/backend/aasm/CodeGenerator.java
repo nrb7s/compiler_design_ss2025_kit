@@ -143,10 +143,16 @@ public class CodeGenerator {
                 builder.append("\tnotl ").append(r).append("\n");
             }
             case LogicalNotNode ln -> {
-                String r = regAllocate(ln.operand(), registers, spillOffset);
-                builder.append("\tcmpl $0, ").append(r).append("\n")
-                        .append("\tsete %al\n")
-                        .append("\tmovzbl %al, ").append(r).append("\n");
+                String src = regAllocate(ln.operand(), registers, spillOffset);
+                String dst = regAllocate(ln, registers, spillOffset);
+                builder.append("\tcmpl $0, ").append(src).append("\n")
+                        .append("\tsete %al\n");
+                if (isMemory(dst)) {
+                    builder.append("\tmovzbl %al, ").append(TEMP_REG_1).append("\n")
+                            .append("\tmovl ").append(TEMP_REG_1).append(", ").append(dst).append("\n");
+                } else {
+                    builder.append("\tmovzbl %al, ").append(dst).append("\n");
+                }
             }
             case CondJumpNode cj -> {
                 String condReg = regAllocate(cj.condition(), registers, spillOffset);
