@@ -196,6 +196,7 @@ public class GraphConstructor {
         for (Node pred : phi.block().predecessors()) {
             phi.appendOperand(readVariable(variable, pred.block()));
         }
+        phi.block().nodes().add(0, phi);
         return tryRemoveTrivialPhi(phi);
     }
 
@@ -278,6 +279,7 @@ public class GraphConstructor {
         for (Node pred : phi.block().predecessors()) {
             phi.appendOperand(readSideEffect(pred.block()));
         }
+        phi.block().nodes().add(0, phi);
         return tryRemoveTrivialPhi(phi);
     }
 
@@ -395,6 +397,11 @@ public class GraphConstructor {
                 currentBlock().addCfgSuccessor(afterBlock);
             }
         }
+        sealBlock(thenBlock);
+        if (ifTree.elseBranch() != null) {
+            sealBlock(elseBlock);
+        }
+        sealBlock(afterBlock);
         // Continue in afterBlock
         currentBlock = afterBlock;
     }
