@@ -405,6 +405,9 @@ public class GraphConstructor {
             graph.registerSuccessor(currentBlock, condBlock);
             currentBlock().addCfgSuccessor(condBlock);
         }
+        sealBlock(condBlock);
+        sealBlock(bodyBlock);
+        sealBlock(afterBlock);
         continueTargetStack.pop();
         breakTargetStack.pop();
         // Continue in after block
@@ -446,6 +449,11 @@ public class GraphConstructor {
             buildBody(forTree.step());
         graph.registerSuccessor(currentBlock, condBlock);
         currentBlock().addCfgSuccessor(condBlock);
+
+        sealBlock(condBlock);
+        sealBlock(stepBlock);
+        sealBlock(bodyBlock);
+        sealBlock(afterBlock);
 
         continueTargetStack.pop();
         breakTargetStack.pop();
