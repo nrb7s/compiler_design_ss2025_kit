@@ -7,10 +7,7 @@ import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import org.jspecify.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class GraphConstructor {
 
@@ -21,6 +18,8 @@ public class GraphConstructor {
     private final Map<Block, Node> currentSideEffect = new HashMap<>();
     private final Map<Block, Phi> incompleteSideEffectPhis = new HashMap<>();
     private final Set<Block> sealedBlocks = new HashSet<>();
+    private final Deque<Block> breakTargetStack = new ArrayDeque<>();
+    private final Deque<Block> continueTargetStack = new ArrayDeque<>();
     private @Nullable Block currentBlock;
 
     public GraphConstructor(Optimizer optimizer, String name) {
@@ -320,8 +319,22 @@ public class GraphConstructor {
             currentBlock().addNode(retNode);
             // No more code should be generated in this block after return
             currentBlock = null;
-        } else if (stmt instanceof ContinueTree || stmt instanceof BreakTree) {
-            // Do nothing, handle in codegenstage
+        } else if (stmt instanceof BreakTree) {
+            if (breakTargetStack.isEmpty()) {
+                throw new IllegalStateException("'break' used outside of loop");
+            }
+            Block target = breakTargetStack.peek();
+            graph.registerSuccessor(currentBlock, target);
+            currentBlock().addCfgSuccessor(target);
+            currentBlock = null;
+        } else if (stmt instanceof ContinueTree) {
+            if (continueTargetStack.isEmpty()) {
+                throw new IllegalStateException("'continue' used outside of loop");
+            }
+            Block target = continueTargetStack.peek();
+            graph.registerSuccessor(currentBlock, target);
+            currentBlock().addCfgSuccessor(target);
+            currentBlock = null;
         } else {
             throw new UnsupportedOperationException("Unknown StatementTree: " + stmt);
         }
@@ -368,6 +381,9 @@ public class GraphConstructor {
         Block bodyBlock = new Block(graph);
         Block afterBlock = new Block(graph);
 
+        breakTargetStack.push(afterBlock);
+        continueTargetStack.push(condBlock);
+
         // Jump to cond block
         currentBlock().addCfgSuccessor(condBlock);
         graph.registerSuccessor(currentBlock, condBlock);
@@ -389,6 +405,8 @@ public class GraphConstructor {
             graph.registerSuccessor(currentBlock, condBlock);
             currentBlock().addCfgSuccessor(condBlock);
         }
+        continueTargetStack.pop();
+        breakTargetStack.pop();
         // Continue in after block
         currentBlock = afterBlock;
     }
@@ -398,6 +416,9 @@ public class GraphConstructor {
         Block bodyBlock = new Block(graph);
         Block stepBlock = new Block(graph);
         Block afterBlock = new Block(graph);
+
+        breakTargetStack.push(afterBlock);
+        continueTargetStack.push(stepBlock);
 
         // for (init; cond; step) {body}
         if (forTree.init() != null)
@@ -425,6 +446,9 @@ public class GraphConstructor {
             buildBody(forTree.step());
         graph.registerSuccessor(currentBlock, condBlock);
         currentBlock().addCfgSuccessor(condBlock);
+
+        continueTargetStack.pop();
+        breakTargetStack.pop();
 
         currentBlock = afterBlock;
     }
