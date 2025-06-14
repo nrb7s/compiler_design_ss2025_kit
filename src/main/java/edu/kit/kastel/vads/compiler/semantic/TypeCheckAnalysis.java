@@ -33,9 +33,22 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
                 throw new SemanticException("variable " + ident.name() + " not declared");
             }
             BasicType exprType = expressionType(assignmentTree.expression(), data);
-            if (exprType != expected) {
-                throw new SemanticException(
-                        "cannot assign " + exprType.asString() + " to " + expected.asString());
+            OperatorType op = assignmentTree.operator().type();
+            switch (op) {
+                case ASSIGN -> {
+                    if (exprType != expected) {
+                        throw new SemanticException(
+                                "cannot assign " + exprType.asString() + " to " + expected.asString());
+                    }
+                }
+                case ASSIGN_PLUS, ASSIGN_MINUS, ASSIGN_MUL, ASSIGN_DIV,
+                     ASSIGN_MOD, ASSIGN_LSHIFT, ASSIGN_RSHIFT,
+                     ASSIGN_AND, ASSIGN_OR, ASSIGN_XOR -> {
+                    if (expected != BasicType.INT || exprType != BasicType.INT) {
+                        throw new SemanticException(op + " expects int operands");
+                    }
+                }
+                default -> throw new SemanticException("unsupported assignment operator " + op);
             }
         }
         return NoOpVisitor.super.visit(assignmentTree, data);

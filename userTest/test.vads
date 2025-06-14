@@ -1,8 +1,5 @@
 int main() {
-    int n = 0;
-    while (n < 100) {
-        n += 1;
-        break;
-    }
-    return n;
+bool a = true;
+a &= true;
+return 0;
 }

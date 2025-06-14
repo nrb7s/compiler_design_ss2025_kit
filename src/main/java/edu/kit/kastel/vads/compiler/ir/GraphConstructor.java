@@ -327,6 +327,16 @@ public class GraphConstructor {
                         newDiv(readVariable(var, currentBlock()), value));
                 case ASSIGN_MOD -> writeVariable(var, currentBlock(),
                         newMod(readVariable(var, currentBlock()), value));
+                case ASSIGN_LSHIFT -> writeVariable(var, currentBlock(),
+                        newShl(readVariable(var, currentBlock()), value));
+                case ASSIGN_RSHIFT -> writeVariable(var, currentBlock(),
+                        newShr(readVariable(var, currentBlock()), value));
+                case ASSIGN_AND -> writeVariable(var, currentBlock(),
+                        newAnd(readVariable(var, currentBlock()), value));
+                case ASSIGN_OR -> writeVariable(var, currentBlock(),
+                        newOr(readVariable(var, currentBlock()), value));
+                case ASSIGN_XOR -> writeVariable(var, currentBlock(),
+                        newXor(readVariable(var, currentBlock()), value));
                 default -> throw new UnsupportedOperationException("Unsupported assignment operator");
             }
         } else if (stmt instanceof IfTree ifTree) {
