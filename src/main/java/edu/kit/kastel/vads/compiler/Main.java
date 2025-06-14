@@ -79,7 +79,7 @@ public class Main {
 
         if ("vcg".equals(System.getenv("DUMP_GRAPHS")) || "vcg".equals(System.getProperty("dumpGraphs"))) {
             Path tmp = output.toAbsolutePath().resolveSibling("graphs");
-            Files.createDirectory(tmp);
+            Files.createDirectories(tmp);
             for (IrGraph graph : graphs) {
                 dumpGraph(graph, tmp, "before-codegen");
             }
