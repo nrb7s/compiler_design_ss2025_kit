@@ -45,9 +45,9 @@ public class CodeGenerator {
             builder.append("\tpush %rbp\n");  // notice 64bit here
             builder.append("\tmov %rsp, %rbp\n");
             if (totalSpillBytes > 0) {
-                builder.append("\tsubl $")
+                builder.append("\tsubq $")
                         .append(totalSpillBytes)
-                        .append(", %esp\n");
+                        .append(", %rsp\n");
             }
             List<Block> blocks = graph.blocks();
             Block entry = blocks.get(0);
@@ -58,7 +58,7 @@ public class CodeGenerator {
             // Epilogue
             // builder.append("\tpopp %rbp\n");
             // builder.append("\tleave\n"); // leave = movl %ebp, %esp then popl %ebp
-            builder.append("\tmov %rbp, %rsp\n")
+            builder.append("\tmovq %rbp, %rsp\n")
                     .append("\tpop %rbp\n");
             builder.append("\tret\n\n");
         }
@@ -179,7 +179,7 @@ public class CodeGenerator {
                 builder.append("\tmovl ")
                         .append(regAllocate(res, registers, spillOffset))
                         .append(", %eax\n");
-                builder.append("\tmov %rbp, %rsp\n")
+                builder.append("\tmovq %rbp, %rsp\n")
                         .append("\tpop %rbp\n")
                         .append("\tret\n");
                 return;
