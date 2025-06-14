@@ -342,6 +342,9 @@ public class GraphConstructor {
             Node retNode = newReturn(value);
             graph.registerSuccessor(currentBlock, retNode);
             currentBlock().addNode(retNode);
+
+            graph.registerSuccessor(retNode, graph.endBlock());
+            currentBlock().addCfgSuccessor(graph.endBlock());
             // No more code should be generated in this block after return
             currentBlock = null;
         } else if (stmt instanceof BreakTree) {
