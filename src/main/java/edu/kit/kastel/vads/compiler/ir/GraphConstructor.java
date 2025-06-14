@@ -531,6 +531,18 @@ public class GraphConstructor {
                 currentBlock().addNode(c);
                 return c;
             }
+            case LogicalNotTree not -> {
+                Node op = buildExpr(not.operand());
+                Node n = newLogicalNot(op);
+                currentBlock().addNode(n);
+                return n;
+            }
+            case BitwiseNotTree bit -> {
+                Node op = buildExpr(bit.operand());
+                Node n = newBitwiseNot(op);
+                currentBlock().addNode(n);
+                return n;
+            }
             case BinaryOperationTree bin -> {
                 Node left = buildExpr(bin.lhs());
                 Node right = buildExpr(bin.rhs());
