@@ -85,7 +85,8 @@ public class Lexer {
         if (match("&")) return new Operator(Operator.OperatorType.AND, buildSpan(1));
         if (match("|")) return new Operator(Operator.OperatorType.OR, buildSpan(1));
         if (match("^")) return new Operator(Operator.OperatorType.XOR, buildSpan(1));
-        if (match("~")) return new Operator(Operator.OperatorType.NOT, buildSpan(1));
+        if (match("!")) return new Operator(Operator.OperatorType.NOT, buildSpan(1));
+        if (match("~")) return new Operator(Operator.OperatorType.BITWISE_NOT, buildSpan(1));
         if (match("?")) return new Operator(Operator.OperatorType.QUESTION, buildSpan(1));
         if (match(":")) return new Operator(Operator.OperatorType.COLON, buildSpan(1));
 
