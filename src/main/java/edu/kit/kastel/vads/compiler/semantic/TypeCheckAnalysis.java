@@ -153,7 +153,7 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
         OperatorType op = bin.operatorType();
         return switch (op) {
             case PLUS, MINUS, MUL, DIV, MOD,
-                 LSHIFT, RSHIFT, SHL, SHR,
+                 LSHIFT, RSHIFT,
                  AND, OR, XOR,
                  ASSIGN_MINUS, ASSIGN_PLUS, ASSIGN_MUL, ASSIGN_DIV, ASSIGN_MOD,
                  ASSIGN_LSHIFT, ASSIGN_RSHIFT, ASSIGN_AND, ASSIGN_OR, ASSIGN_XOR -> {
