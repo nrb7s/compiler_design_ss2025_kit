@@ -568,6 +568,9 @@ public class GraphConstructor {
                 Block elseBlock = new Block(graph);
                 Block afterBlock = new Block(graph);
 
+                currentBlock().addCfgSuccessor(thenBlock);
+                currentBlock().addCfgSuccessor(elseBlock);
+
                 Node condValue = buildExpr(cond.condition());
                 Node branchNode = new CondJumpNode(currentBlock, condValue, thenBlock, elseBlock);
                 currentBlock().addNode(branchNode);
@@ -578,12 +581,14 @@ public class GraphConstructor {
                 Node thenResult = buildExpr(cond.thenExpr());
                 currentBlock().addNode(thenResult);
                 graph.registerSuccessor(currentBlock, afterBlock);
+                currentBlock().addCfgSuccessor(afterBlock);
 
                 // Else branch
                 currentBlock = elseBlock;
                 Node elseResult = buildExpr(cond.elseExpr());
                 currentBlock().addNode(elseResult);
                 graph.registerSuccessor(currentBlock, afterBlock);
+                currentBlock().addCfgSuccessor(afterBlock);
 
                 // Merge with Phi
                 currentBlock = afterBlock;

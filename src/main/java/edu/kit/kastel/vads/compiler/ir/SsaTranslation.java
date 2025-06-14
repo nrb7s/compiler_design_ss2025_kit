@@ -376,6 +376,9 @@ public class SsaTranslation {
             Block elseBlock = new Block(data.constructor.graph());
             Block afterBlock = new Block(data.constructor.graph());
 
+            data.currentBlock().addCfgSuccessor(thenBlock);
+            data.currentBlock().addCfgSuccessor(elseBlock);
+
             Node cond = conditionalTree.condition().accept(this, data).orElseThrow();
             Node branch = new edu.kit.kastel.vads.compiler.ir.node.CondJumpNode(data.currentBlock(), cond, thenBlock, elseBlock);
             data.currentBlock().addNode(branch);
@@ -384,10 +387,12 @@ public class SsaTranslation {
             data.setCurrentBlock(thenBlock);
             Node thenRes = conditionalTree.thenExpr().accept(this, data).orElseThrow();
             data.constructor.graph().registerSuccessor(data.currentBlock(), afterBlock);
+            data.currentBlock().addCfgSuccessor(afterBlock);
 
             data.setCurrentBlock(elseBlock);
             Node elseRes = conditionalTree.elseExpr().accept(this, data).orElseThrow();
             data.constructor.graph().registerSuccessor(data.currentBlock(), afterBlock);
+            data.currentBlock().addCfgSuccessor(afterBlock);
 
             data.setCurrentBlock(afterBlock);
             var phi = new edu.kit.kastel.vads.compiler.ir.node.Phi(afterBlock);
