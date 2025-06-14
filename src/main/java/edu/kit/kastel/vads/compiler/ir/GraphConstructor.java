@@ -200,11 +200,34 @@ public class GraphConstructor {
     }
 
     Node tryRemoveTrivialPhi(Phi phi) {
-        // TODO: the paper shows how to remove trivial phis.
-        // as this is not a problem in Lab 1 and it is just
-        // a simplification, we recommend to implement this
-        // part yourself.
-        return phi;
+        Node same = null;
+        for (Node op : phi.predecessors()) {
+            if (op == phi) continue;
+            if (same == null) {
+                same = op;
+            } else if (same != op) {
+                return phi;
+            }
+        }
+
+        if (same == null) {
+            return phi;
+        }
+
+        // Remove the phi from its block, if it was inserted
+        phi.block().nodes().remove(phi);
+
+        // Redirect all uses to the single operand
+        for (Node succ : phi.graph().successors(phi)) {
+            List<? extends Node> preds = succ.predecessors();
+            for (int i = 0; i < preds.size(); i++) {
+                if (succ.predecessor(i) == phi) {
+                    succ.setPredecessor(i, same);
+                }
+            }
+        }
+
+        return same;
     }
 
     void sealBlock(Block block) {
