@@ -102,48 +102,70 @@ public class GraphConstructor {
     }
 
     public Node newCmpGT(Node l, Node r) {  // >
-        return optimizer.transform(new CmpGTNode(currentBlock(), l, r));
+        CmpGTNode node = new CmpGTNode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     public Node newCmpGE(Node l, Node r) {  // >=
-        return optimizer.transform(new CmpGENode(currentBlock(), l, r));
+        CmpGENode node = new CmpGENode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     public Node newCmpLT(Node l, Node r) {  // <
-        return optimizer.transform(new CmpLTNode(currentBlock(), l, r));
+        CmpLTNode node = new CmpLTNode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     public Node newCmpLE(Node l, Node r) {  // <=
-        return optimizer.transform(new CmpLENode(currentBlock(), l, r));
+        CmpLENode node = new CmpLENode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     public Node newCmpEQ(Node l, Node r) {  // ==
-        return optimizer.transform(new CmpEQNode(currentBlock(), l, r));
+        CmpEQNode node = new CmpEQNode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     public Node newCmpNE(Node l, Node r) {  // !=
-        return optimizer.transform(new CmpNENode(currentBlock(), l, r));
+        CmpNENode node = new CmpNENode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     public Node newAnd(Node l, Node r) {     // &
-        return optimizer.transform(new AndNode(currentBlock(), l, r));
+        AndNode node = new AndNode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     public Node newOr(Node l, Node r) {      // |
-        return optimizer.transform(new OrNode(currentBlock(), l, r));
+        OrNode node = new OrNode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     public Node newXor(Node l, Node r) {     // ^
-        return optimizer.transform(new XorNode(currentBlock(), l, r));
+        XorNode node = new XorNode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     // r & 0x1F
     public Node newShl(Node l, Node r) {     // <<
-        return optimizer.transform(new ShlNode(currentBlock(), l, r));
+        ShlNode node = new ShlNode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
     public Node newShr(Node l, Node r) {     // >>
-        return optimizer.transform(new ShrNode(currentBlock(), l, r));
+        ShrNode node = new ShrNode(currentBlock(), l, r);
+        currentBlock().addNode(node);
+        return optimizer.transform(node);
     }
 
 
@@ -534,9 +556,7 @@ public class GraphConstructor {
             }
             case NegateTree neg -> {
                 Node operand = buildExpr(neg.expression());
-                Node n = newSub(newConstInt(0), operand);
-                currentBlock().addNode(n);
-                return n;
+                return newSub(newConstInt(0), operand);
             }
             case BooleanLiteralTree bl -> {
                 // represent true==1, false==0
@@ -546,15 +566,11 @@ public class GraphConstructor {
             }
             case LogicalNotTree not -> {
                 Node op = buildExpr(not.operand());
-                Node n = newLogicalNot(op);
-                currentBlock().addNode(n);
-                return n;
+                return newLogicalNot(op);
             }
             case BitwiseNotTree bit -> {
                 Node op = buildExpr(bit.operand());
-                Node n = newBitwiseNot(op);
-                currentBlock().addNode(n);
-                return n;
+                return newBitwiseNot(op);
             }
             case BinaryOperationTree bin -> {
                 Node left = buildExpr(bin.lhs());
@@ -591,7 +607,6 @@ public class GraphConstructor {
                     case NE    -> newCmpNE(left, right);   // !=
                     default -> throw new UnsupportedOperationException("Unknown binary op: " + bin.operatorType());
                 };
-                currentBlock().addNode(n);
                 return n;
             }
             case ConditionalTree cond -> {
@@ -611,14 +626,12 @@ public class GraphConstructor {
                 // Then branch
                 currentBlock = thenBlock;
                 Node thenResult = buildExpr(cond.thenExpr());
-                currentBlock().addNode(thenResult);
                 graph.registerSuccessor(currentBlock, afterBlock);
                 currentBlock().addCfgSuccessor(afterBlock);
 
                 // Else branch
                 currentBlock = elseBlock;
                 Node elseResult = buildExpr(cond.elseExpr());
-                currentBlock().addNode(elseResult);
                 graph.registerSuccessor(currentBlock, afterBlock);
                 currentBlock().addCfgSuccessor(afterBlock);
 

@@ -4,32 +4,53 @@
 main:
 	push %rbp
 	mov %rsp, %rbp
-	subl $32, %esp
+	subq $40, %rsp
 	jmp L0
 L0:
-	movl $0, %ebx
-	movl $100, %ecx
-	movl $1, -4(%rbp)
+	movl $1, %ebx
+	movl $2, %ecx
+	movl $3, -4(%rbp)
+	movl %ecx, -8(%rbp)
+	movl -8(%rbp), %esi
+	movl -4(%rbp), %edi
+	imull %edi, %esi
+	movl %esi, -8(%rbp)
+	movl %ecx, -8(%rbp)
+	movl -8(%rbp), %esi
+	movl -4(%rbp), %edi
+	imull %edi, %esi
+	movl %esi, -8(%rbp)
+	movl %ebx, -12(%rbp)
+	movl -8(%rbp), %esi
+	addl %esi, -12(%rbp)
+	movl %ebx, -12(%rbp)
+	movl -8(%rbp), %esi
+	addl %esi, -12(%rbp)
+	movl $10, -16(%rbp)
+	movl -16(%rbp), %esi
+	cmpl %esi, -12(%rbp)
+	setl %al
+	movzbl %al, %esi
+	movl %esi, -20(%rbp)
+	cmpl $0, -20(%rbp)
+	jne L2
+	jmp L3
+	movl $42, -28(%rbp)
+	movl $24, -32(%rbp)
 	jmp L2
 L2:
-	cmpl %ecx, -8(%rbp)
-	movzbl %al, %esi
-	movl %esi, -12(%rbp)
-	cmpl $0, -12(%rbp)
-	jne L3
+	movl $42, -28(%rbp)
 	jmp L4
 L3:
-	movl -20(%rbp),%esi
-	movl %esi, -24(%rbp)
-	movl -4(%rbp), %esi
-	addl %esi, -24(%rbp)
+	movl $24, -32(%rbp)
 	jmp L4
 L4:
-	movl -32(%rbp), %eax
-	mov %rbp, %rsp
+	movl -36(%rbp), %eax
+	movq %rbp, %rsp
 	pop %rbp
 	ret
-	mov %rbp, %rsp
+L1:
+	movq %rbp, %rsp
 	pop %rbp
 	ret
 
