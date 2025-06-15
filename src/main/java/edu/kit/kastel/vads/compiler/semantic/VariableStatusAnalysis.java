@@ -75,13 +75,7 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
         VariableStatus status = declarationTree.initializer() == null
             ? VariableStatus.DECLARED
             : VariableStatus.INITIALIZED;
-        data.declare(declarationTree.name(), status, (existing, replacement) -> {
-            if (existing.ordinal() >= replacement.ordinal()) {
-                throw new SemanticException("variable is already " + existing +
-                        ". Cannot be " + replacement + " here.");
-            }
-            return replacement;
-        });
+        data.declare(declarationTree.name(), status);
         return NoOpVisitor.super.visit(declarationTree, data);
     }
 

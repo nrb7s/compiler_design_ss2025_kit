@@ -30,8 +30,8 @@ public class Namespace<T> {
         return this.declaredHere.contains(name.name());
     }
 
-    public void declare(NameTree name, T value, BinaryOperator<T> merger) {
-        this.content.merge(name.name(), value, merger);
+    public void declare(NameTree name, T value) {
+        this.content.put(name.name(), value);
         this.declaredHere.add(name.name());
     }
 
