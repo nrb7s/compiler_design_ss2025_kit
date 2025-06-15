@@ -143,6 +143,15 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
         whileLoopTree.condition().accept(this, data);
         Namespace<VariableStatus> scope = data.fork();
         whileLoopTree.body().accept(this, scope);
+        for (var name : data.names()) {
+            VariableStatus before = data.get(name);
+            VariableStatus after = scope.get(name);
+            if (before == null || after == null) {
+                continue;
+            }
+            VariableStatus merged = before.ordinal() < after.ordinal() ? before : after;
+            data.put(name, merged, (o, n) -> n);
+        }
         return Unit.INSTANCE;
     }
 
@@ -191,6 +200,12 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
     public Unit visit(BitwiseNotTree bitwiseNotTree, Namespace<VariableStatus> data) {
         bitwiseNotTree.operand().accept(this, data);
         return NoOpVisitor.super.visit(bitwiseNotTree, data);
+    }
+
+    @Override
+    public Unit visit(ExpressionStatementTree expressionStatementTree, Namespace<VariableStatus> data) {
+        expressionStatementTree.expr().accept(this, data);
+        return NoOpVisitor.super.visit(expressionStatementTree, data);
     }
 
     @Override
