@@ -36,6 +36,21 @@ class ReturnAnalysis implements NoOpVisitor<Unit> {
             case IfTree i -> i.elseBranch() != null
                     && alwaysReturns(i.thenBranch())
                     && alwaysReturns(i.elseBranch());
+            case WhileLoopTree w -> {
+                alwaysReturns(w.body());
+                yield false;
+            }
+            case ForLoopTree f -> {
+                if (f.init() != null && alwaysReturns(f.init())) {
+                    yield true;
+                }
+                if (f.step() != null) {
+                    alwaysReturns(f.step());
+                }
+                // guaranteed to return
+                alwaysReturns(f.body());
+                yield false;
+            }
             default -> false;
         };
     }
