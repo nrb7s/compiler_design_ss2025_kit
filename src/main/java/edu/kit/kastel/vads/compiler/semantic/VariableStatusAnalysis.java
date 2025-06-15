@@ -16,6 +16,20 @@ import java.util.Locale;
 class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnalysis.VariableStatus>> {
 
     @Override
+    public Unit visit(ProgramTree programTree, Namespace<VariableStatus> data) {
+        for (FunctionTree f : programTree.topLevelTrees()) {
+            f.accept(this, new Namespace<>());
+        }
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    public Unit visit(FunctionTree functionTree, Namespace<VariableStatus> data) {
+        functionTree.body().accept(this, data.fork());
+        return Unit.INSTANCE;
+    }
+
+    @Override
     public Unit visit(AssignmentTree assignmentTree, Namespace<VariableStatus> data) {
         switch (assignmentTree.lValue()) {
             case LValueIdentTree(var name) -> {
