@@ -514,7 +514,12 @@ public class GraphConstructor {
         copyCurrentDefsTo(condBlock);
         currentBlock = condBlock;
 
-        Node condValue = buildExpr(forTree.condition());
+        Node condValue;
+        if (forTree.condition() == null) {
+            condValue = newConstInt(1);
+        } else {
+            condValue = buildExpr(forTree.condition());
+        }
         Node condJump = new CondJumpNode(currentBlock, condValue, bodyBlock, afterBlock);
         currentBlock().addNode(condJump);
         graph.registerSuccessor(currentBlock, condJump);
