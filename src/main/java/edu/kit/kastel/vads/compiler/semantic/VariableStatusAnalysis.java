@@ -164,7 +164,7 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
         Namespace<VariableStatus> scope = data.fork();
         if (forLoopTree.init() != null) {
             forLoopTree.init().accept(this, scope);
-            // data.mergeExisting(scope, (o, n) -> n);
+            data.mergeExisting(scope, (o, n) -> n);
         }
         if (forLoopTree.condition() != null) {
             forLoopTree.condition().accept(this, scope);
