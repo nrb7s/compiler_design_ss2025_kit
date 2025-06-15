@@ -60,8 +60,8 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
         }
     }
 
-    private static void checkUndeclared(NameTree name, @Nullable VariableStatus status) {
-        if (status != null) {
+    private static void checkUndeclared(NameTree name, Namespace<VariableStatus> ns) {
+        if (ns.isDeclaredLocally(name)) {
             throw new SemanticException("Variable " + name + " is already declared");
         }
     }
@@ -71,11 +71,17 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
         // debug
         // System.out.println("declaring " + declarationTree.name() + " status=" + data.get(declarationTree.name()));
 
-        checkUndeclared(declarationTree.name(), data.get(declarationTree.name()));
+        checkUndeclared(declarationTree.name(), data);
         VariableStatus status = declarationTree.initializer() == null
             ? VariableStatus.DECLARED
             : VariableStatus.INITIALIZED;
-        updateStatus(data, status, declarationTree.name());
+        data.declare(declarationTree.name(), status, (existing, replacement) -> {
+            if (existing.ordinal() >= replacement.ordinal()) {
+                throw new SemanticException("variable is already " + existing +
+                        ". Cannot be " + replacement + " here.");
+            }
+            return replacement;
+        });
         return NoOpVisitor.super.visit(declarationTree, data);
     }
 

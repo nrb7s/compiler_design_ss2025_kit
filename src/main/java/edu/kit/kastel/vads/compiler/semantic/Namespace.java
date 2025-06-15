@@ -5,6 +5,7 @@ import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BinaryOperator;
@@ -12,15 +13,26 @@ import java.util.function.BinaryOperator;
 public class Namespace<T> {
 
     private final Map<Name, T> content;
+    private final Set<Name> declaredHere;
 
     public Namespace() {
         this.content = new HashMap<>();
+        this.declaredHere = new HashSet<>();
     }
 
     public Namespace<T> fork() {
         Namespace<T> forked = new Namespace<>();
         forked.content.putAll(this.content);
         return forked;
+    }
+
+    public boolean isDeclaredLocally(NameTree name) {
+        return this.declaredHere.contains(name.name());
+    }
+
+    public void declare(NameTree name, T value, BinaryOperator<T> merger) {
+        this.content.merge(name.name(), value, merger);
+        this.declaredHere.add(name.name());
     }
 
     public void mergeExisting(Namespace<T> other, BinaryOperator<T> merger) {
