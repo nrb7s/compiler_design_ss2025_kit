@@ -94,41 +94,58 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
     // L2
     @Override
     public Unit visit(BlockTree blockTree, Namespace<VariableStatus> data) {
-        // Namespace<VariableStatus> scope = data.fork();
-        // return NoOpVisitor.super.visit(blockTree, scope);
+        Namespace<VariableStatus> scope = data.fork();
+        for (StatementTree stmt : blockTree.statements()) {
+            stmt.accept(this, scope);
+        }
+        data.mergeExisting(scope, (oldVal, newVal) -> newVal);
         return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(IfTree ifTree, Namespace<VariableStatus> data) {
-        /*
         ifTree.condition().accept(this, data);
-        ifTree.thenBranch().accept(this, data.fork());
+        Namespace<VariableStatus> thenScope = data.fork();
+        ifTree.thenBranch().accept(this, thenScope);
+
+        Namespace<VariableStatus> elseScope = data.fork();
         if (ifTree.elseBranch() != null) {
-            ifTree.elseBranch().accept(this, data.fork());
+            ifTree.elseBranch().accept(this, elseScope);
         }
-         */
+        for (var name : data.names()) {
+            VariableStatus sThen = thenScope.get(name);
+            VariableStatus sElse = elseScope.get(name);
+            if (sThen == null || sElse == null) {
+                continue;
+            }
+            VariableStatus merged = sThen.ordinal() < sElse.ordinal() ? sThen : sElse;
+            data.put(name, merged, (a, b) -> b);
+        }
         return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(WhileLoopTree whileLoopTree, Namespace<VariableStatus> data) {
-        /*
         whileLoopTree.condition().accept(this, data);
-        whileLoopTree.body().accept(this, data.fork());
-         */
+        Namespace<VariableStatus> scope = data.fork();
+        whileLoopTree.body().accept(this, scope);
         return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(ForLoopTree forLoopTree, Namespace<VariableStatus> data) {
-        /*
         Namespace<VariableStatus> scope = data.fork();
-        if (forLoopTree.init() != null) forLoopTree.init().accept(this, scope);
-        if (forLoopTree.condition() != null) forLoopTree.condition().accept(this, scope);
-        if (forLoopTree.step() != null) forLoopTree.step().accept(this, scope);
+        if (forLoopTree.init() != null) {
+            forLoopTree.init().accept(this, scope);
+            data.mergeExisting(scope, (o, n) -> n);
+        }
+        if (forLoopTree.condition() != null) {
+            forLoopTree.condition().accept(this, scope);
+        }
+        if (forLoopTree.step() != null) {
+            forLoopTree.step().accept(this, scope);
+        }
         forLoopTree.body().accept(this, scope);
-         */
         return Unit.INSTANCE;
     }
 
