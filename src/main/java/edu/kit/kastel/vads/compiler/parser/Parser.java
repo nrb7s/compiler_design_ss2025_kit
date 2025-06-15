@@ -174,6 +174,14 @@ public class Parser {
                 : BasicType.BOOL;
         Identifier id = tokenSource.expectIdentifier();
         ExpressionTree init = null;
+
+        boolean hasAssignmentOp = false;
+        if (tokenSource.peek() instanceof Operator op && op.type() == OperatorType.ASSIGN) {
+            hasAssignmentOp = true;
+            tokenSource.consume();
+            init = parseExpression();
+        }
+
         if (tokenSource.peek() instanceof Operator op
                 && op.type() == OperatorType.ASSIGN) {
             tokenSource.consume();
@@ -413,6 +421,44 @@ public class Parser {
     }
 
     private ExpressionTree parseFactor() {
+        Token currentToken = this.tokenSource.peek();
+        ExpressionTree result = switch (currentToken) {
+            case Separator(var type, _) when type == SeparatorType.PAREN_OPEN -> {
+                this.tokenSource.consume();
+                ExpressionTree expression = parseExpression();
+                this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+                yield expression;
+            }
+            case Operator(var type, _) when type == OperatorType.MINUS -> {
+                Span span = this.tokenSource.consume().span();
+                yield new NegateTree(parseFactor(), span);
+            }
+            case Identifier ident -> {
+                this.tokenSource.consume();
+                yield new IdentExpressionTree(name(ident));
+            }
+            case NumberLiteral(String value, int base, Span span) -> {
+                this.tokenSource.consume();
+                yield new LiteralTree(value, base, span);
+            }
+            case Keyword(var kw, var span) when kw == KeywordType.TRUE -> {
+                consume();
+                yield new BooleanLiteralTree(true, span);
+            }
+            case Keyword(var kw, var span) when kw == KeywordType.FALSE -> {
+                consume();
+                yield new BooleanLiteralTree(false, span);
+            }
+            case Keyword(var kw, var span) when kw == KeywordType.NULL -> {
+                consume();
+                yield new LiteralTree("NULL", 10, span);
+            }
+            case Token t -> {
+                throw new ParseException("invalid factor " + t);
+            }
+        };
+        return result;
+        /*
         return switch (this.tokenSource.peek()) {
             case Separator(var type, _) when type == SeparatorType.PAREN_OPEN -> {
                 this.tokenSource.consume();
@@ -446,6 +492,8 @@ public class Parser {
             }
             case Token t -> throw new ParseException("invalid factor " + t);
         };
+
+         */
     }
 
     private static NameTree name(Identifier ident) {

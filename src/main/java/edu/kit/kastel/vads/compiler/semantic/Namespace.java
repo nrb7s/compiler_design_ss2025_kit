@@ -41,6 +41,12 @@ public class Namespace<T> {
                 this.content.merge(e.getKey(), e.getValue(), merger);
             }
         }
+        for (Name nameDeclaredInOther : other.declaredHere) {
+            if (!this.content.containsKey(nameDeclaredInOther)) {
+                this.content.put(nameDeclaredInOther, other.content.get(nameDeclaredInOther));
+                this.declaredHere.add(nameDeclaredInOther);
+            }
+        }
     }
 
     public Set<Name> names() {
