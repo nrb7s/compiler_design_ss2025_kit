@@ -148,7 +148,12 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
             if (before == null || after == null) {
                 continue;
             }
-            VariableStatus merged = before.ordinal() < after.ordinal() ? before : after;
+            VariableStatus merged;
+            if (before == VariableStatus.INITIALIZED || after == VariableStatus.INITIALIZED) {
+                merged = VariableStatus.INITIALIZED;
+            } else {
+                merged = VariableStatus.DECLARED;
+            }
             data.put(name, merged, (o, n) -> n);
         }
         return Unit.INSTANCE;
