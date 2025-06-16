@@ -170,7 +170,15 @@ public class CodeGenerator {
                         registers, spillOffset
                 );
                 if (!src.equals(dst)) {
-                    builder.append("\tmovl ").append(src).append(", ").append(dst).append("\n");
+                    if (isMemory(src) && isMemory(dst)) {
+                        builder.append("\tmovl ").append(src).append(", ")
+                                .append(TEMP_REG_1).append("\n");
+                        builder.append("\tmovl ").append(TEMP_REG_1)
+                                .append(", ").append(dst).append("\n");
+                    } else {
+                        builder.append("\tmovl ").append(src)
+                                .append(", ").append(dst).append("\n");
+                    }
                 }
             }
             // L2 ends
