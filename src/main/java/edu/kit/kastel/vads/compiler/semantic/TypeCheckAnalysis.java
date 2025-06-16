@@ -12,7 +12,7 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
     @Override
     public Unit visit(ProgramTree programTree, Namespace<BasicType> data) {
         for (FunctionTree f : programTree.topLevelTrees()) {
-            f.accept(this, new Namespace<>());
+            f.accept(this, data.fork());
         }
         return Unit.INSTANCE;
     }
@@ -30,7 +30,7 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
     public Unit visit(FunctionTree functionTree, Namespace<BasicType> data) {
         BasicType previous = currentReturnType;
         currentReturnType = (BasicType) functionTree.returnType().type();
-        functionTree.body().accept(this, data);
+        functionTree.body().accept(this, data.fork());
         currentReturnType = previous;
         return Unit.INSTANCE;
     }
@@ -38,7 +38,7 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
     @Override
     public Unit visit(DeclarationTree declarationTree, Namespace<BasicType> data) {
         BasicType type = (BasicType) declarationTree.type().type();
-        data.put(declarationTree.name(), type, (existing, replacement) -> existing);
+        data.declare(declarationTree.name(), type);
         if (declarationTree.initializer() != null) {
             BasicType init = expressionType(declarationTree.initializer(), data);
             if (init != type) {
@@ -130,6 +130,12 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
             }
         }
         if (forLoopTree.step() != null) {
+            if (forLoopTree.step() instanceof DeclarationTree) {
+                throw new SemanticException("no declaration in step");
+            }
+            if (!(forLoopTree.step() instanceof ExpressionStatementTree)) {
+                throw new SemanticException("step must be expression statement");
+            }
             forLoopTree.step().accept(this, scope);
         }
         forLoopTree.body().accept(this, scope);
@@ -181,6 +187,7 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
                 yield t;
             }
             case BinaryOperationTree bin -> binaryType(bin, data);
+            default -> throw new SemanticException("Unsupported:" + expr.getClass().getSimpleName());
         };
     }
 

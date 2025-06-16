@@ -1,6 +1,5 @@
 package edu.kit.kastel.vads.compiler.parser;
 
-import com.sun.source.tree.*;
 import edu.kit.kastel.vads.compiler.lexer.*;
 import edu.kit.kastel.vads.compiler.lexer.Operator.OperatorType;
 import edu.kit.kastel.vads.compiler.lexer.Separator.SeparatorType;
@@ -70,17 +69,55 @@ public class Parser {
         return new BlockTree(statements, bodyOpen.span().merge(bodyClose.span()));
     }
 
+    private StatementTree parseDeclarationWithoutSemicolon() {
+        Keyword kw = tokenSource.peek().isKeyword(KeywordType.INT)
+                ? tokenSource.expectKeyword(KeywordType.INT)
+                : tokenSource.expectKeyword(KeywordType.BOOL);
+        BasicType type = kw.type() == KeywordType.INT
+                ? BasicType.INT
+                : BasicType.BOOL;
+        Identifier id = tokenSource.expectIdentifier();
+        ExpressionTree init = null;
+
+        if (tokenSource.peek().isOperator(OperatorType.ASSIGN)) {
+            tokenSource.expectOperator(OperatorType.ASSIGN);
+            init = parseExpression();
+        }
+        return new DeclarationTree(
+                new TypeTree(type, kw.span()),
+                name(id),
+                init
+        );
+    }
+
+    private StatementTree parseReturnWithoutSemicolon() {
+        Keyword ret = this.tokenSource.expectKeyword(KeywordType.RETURN);
+        ExpressionTree expression = parseExpression();
+        return new ReturnTree(expression, ret.span().start());
+    }
+
+    private StatementTree parseExpressionStatementWithoutSemicolon() {
+        return parseSimple();
+    }
+
+    private StatementTree parseSimpleStatementForLoopPart() {
+        if (tokenSource.peek().isKeyword(KeywordType.INT) ||
+                tokenSource.peek().isKeyword(KeywordType.BOOL)) {
+            return parseDeclarationWithoutSemicolon();
+        } else if (tokenSource.peek().isKeyword(KeywordType.RETURN)) {
+            return parseReturnWithoutSemicolon();
+        } else {
+            return parseExpressionStatementWithoutSemicolon();
+        }
+    }
+
     private StatementTree parseStatement() { // update for control structure
         if (tokenSource.peek().isKeyword(KeywordType.INT) ||
                 tokenSource.peek().isKeyword(KeywordType.BOOL)) {
-            StatementTree decl = parseDeclaration();
-            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
-            return decl;
+            return parseDeclaration();
         }
         else if (tokenSource.peek().isKeyword(KeywordType.RETURN)) {
-            StatementTree ret = parseReturn();
-            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
-            return ret;
+            return parseReturn();
         }
         else if (tokenSource.peek().isKeyword(KeywordType.IF)) {
             return parseIf();
@@ -105,9 +142,7 @@ public class Parser {
             return parseBlock();
         }
         else {
-            StatementTree statement = parseSimple();
-            tokenSource.expectSeparator(SeparatorType.SEMICOLON);
-            return statement;
+            return parseExpressionStatement();
         }
     }
 
@@ -140,11 +175,7 @@ public class Parser {
 
         StatementTree init = null;
         if (!tokenSource.peek().isSeparator(SeparatorType.SEMICOLON)) {
-            if (tokenSource.peek().isKeyword(KeywordType.INT)) {
-                init = parseDeclaration();
-            } else {
-                init = parseSimple();
-            }
+            init = parseSimpleStatementForLoopPart();
         }
         tokenSource.expectSeparator(SeparatorType.SEMICOLON);
 
@@ -156,7 +187,7 @@ public class Parser {
 
         StatementTree step = null;
         if (!tokenSource.peek().isSeparator(SeparatorType.PAREN_CLOSE)) {
-            step = parseSimple();
+            step = parseSimpleStatementForLoopPart();
         }
         tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
 
@@ -166,32 +197,9 @@ public class Parser {
     // End L2
 
     private StatementTree parseDeclaration() {
-        Keyword kw = tokenSource.peek().isKeyword(KeywordType.INT)
-                ? tokenSource.expectKeyword(KeywordType.INT)
-                : tokenSource.expectKeyword(KeywordType.BOOL);
-        BasicType type = kw.type() == KeywordType.INT
-                ? BasicType.INT
-                : BasicType.BOOL;
-        Identifier id = tokenSource.expectIdentifier();
-        ExpressionTree init = null;
-
-        boolean hasAssignmentOp = false;
-        if (tokenSource.peek() instanceof Operator op && op.type() == OperatorType.ASSIGN) {
-            hasAssignmentOp = true;
-            tokenSource.consume();
-            init = parseExpression();
-        }
-
-        if (tokenSource.peek() instanceof Operator op
-                && op.type() == OperatorType.ASSIGN) {
-            tokenSource.consume();
-            init = parseExpression();
-        }
-        return new DeclarationTree(
-                new TypeTree(type, kw.span()),
-                name(id),
-                init
-        );
+        StatementTree decl = parseDeclarationWithoutSemicolon();
+        tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+        return decl;
     }
 
     private StatementTree parseSimple() {
@@ -199,6 +207,12 @@ public class Parser {
         Operator assignmentOperator = parseAssignmentOperator();
         ExpressionTree expression = parseExpression();
         return new AssignmentTree(lValue, assignmentOperator, expression);
+    }
+
+    private StatementTree parseExpressionStatement() {
+        StatementTree statement = parseExpressionStatementWithoutSemicolon();
+        tokenSource.expectSeparator(SeparatorType.SEMICOLON);
+        return statement;
     }
 
     private Operator parseAssignmentOperator() {
@@ -238,6 +252,7 @@ public class Parser {
     private StatementTree parseReturn() {
         Keyword ret = this.tokenSource.expectKeyword(KeywordType.RETURN);
         ExpressionTree expression = parseExpression();
+        tokenSource.expectSeparator(SeparatorType.SEMICOLON);
         return new ReturnTree(expression, ret.span().start());
     }
 
