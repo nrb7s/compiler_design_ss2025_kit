@@ -10,19 +10,43 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
     private BasicType currentReturnType = BasicType.INT;
 
     @Override
+    public Unit visit(ProgramTree programTree, Namespace<BasicType> data) {
+        for (FunctionTree f : programTree.topLevelTrees()) {
+            f.accept(this, new Namespace<>());
+        }
+        return Unit.INSTANCE;
+    }
+
+    @Override
+    public Unit visit(BlockTree blockTree, Namespace<BasicType> data) {
+        Namespace<BasicType> scope = data.fork();
+        for (StatementTree stmt : blockTree.statements()) {
+            stmt.accept(this, scope);
+        }
+        return Unit.INSTANCE;
+    }
+
+    @Override
     public Unit visit(FunctionTree functionTree, Namespace<BasicType> data) {
         BasicType previous = currentReturnType;
         currentReturnType = (BasicType) functionTree.returnType().type();
-        Unit ret = NoOpVisitor.super.visit(functionTree, data);
+        functionTree.body().accept(this, data);
         currentReturnType = previous;
-        return ret;
+        return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(DeclarationTree declarationTree, Namespace<BasicType> data) {
         BasicType type = (BasicType) declarationTree.type().type();
         data.put(declarationTree.name(), type, (existing, replacement) -> existing);
-        return NoOpVisitor.super.visit(declarationTree, data);
+        if (declarationTree.initializer() != null) {
+            BasicType init = expressionType(declarationTree.initializer(), data);
+            if (init != type) {
+                throw new SemanticException(
+                        "cannot initialize " + type.asString() + " with " + init.asString());
+            }
+        }
+        return Unit.INSTANCE;
     }
 
     @Override
@@ -51,7 +75,7 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
                 default -> throw new SemanticException("unsupported assignment operator " + op);
             }
         }
-        return NoOpVisitor.super.visit(assignmentTree, data);
+        return Unit.INSTANCE;
     }
 
     @Override
@@ -61,13 +85,13 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
             throw new SemanticException(
                     "cannot return " + type.asString() + " from function returning " + currentReturnType.asString());
         }
-        return NoOpVisitor.super.visit(returnTree, data);
+        return Unit.INSTANCE;
     }
 
     @Override
     public Unit visit(ExpressionStatementTree expressionStatementTree, Namespace<BasicType> data) {
         expressionType(expressionStatementTree.expr(), data);
-        return NoOpVisitor.super.visit(expressionStatementTree, data);
+        return Unit.INSTANCE;
     }
 
     @Override
