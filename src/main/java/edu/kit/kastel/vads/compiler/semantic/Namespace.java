@@ -12,18 +12,22 @@ import java.util.function.BinaryOperator;
 
 public class Namespace<T> {
 
+    private final @Nullable Namespace<T> parent;
     private final Map<Name, T> content;
     private final Set<Name> declaredHere;
 
     public Namespace() {
+        this(null);
+    }
+
+    private Namespace(@Nullable Namespace<T> parent) {
+        this.parent = parent;
         this.content = new HashMap<>();
         this.declaredHere = new HashSet<>();
     }
 
     public Namespace<T> fork() {
-        Namespace<T> forked = new Namespace<>();
-        forked.content.putAll(this.content);
-        return forked;
+        return new Namespace<>(this);
     }
 
     public boolean isDeclaredLocally(NameTree name) {
@@ -31,6 +35,9 @@ public class Namespace<T> {
     }
 
     public void declare(NameTree name, T value) {
+        if (this.content.containsKey(name.name())) {
+            throw new SemanticException("Variable " + name.name() + " already declared in this scope");
+        }
         this.content.put(name.name(), value);
         this.declaredHere.add(name.name());
     }
@@ -42,9 +49,9 @@ public class Namespace<T> {
             }
         }
         for (Name nameDeclaredInOther : other.declaredHere) {
-            if (!this.content.containsKey(nameDeclaredInOther)) {
+            if (!this.content.containsKey(nameDeclaredInOther) && this.get(nameDeclaredInOther) == null) {
                 this.content.put(nameDeclaredInOther, other.content.get(nameDeclaredInOther));
-                this.declaredHere.add(nameDeclaredInOther);
+                // this.declaredHere.add(nameDeclaredInOther);
             }
         }
     }
@@ -62,7 +69,14 @@ public class Namespace<T> {
     }
 
     public @Nullable T get(Name name) {
-        return this.content.get(name);
+        T type = this.content.get(name);
+        if (type != null) {
+            return type;
+        }
+        if (this.parent != null) {
+            return this.parent.get(name);
+        }
+        return null;
     }
 
     public @Nullable T get(NameTree name) {
