@@ -2,11 +2,12 @@ package edu.kit.kastel.vads.compiler.ir;
 
 import edu.kit.kastel.vads.compiler.ir.node.Block;
 import edu.kit.kastel.vads.compiler.ir.node.Node;
-
+import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import java.util.*;
 
 public class IrGraph {
     private final Map<Node, SequencedSet<Node>> successors = new IdentityHashMap<>();
+    private final Map<Node, Name> origins = new IdentityHashMap<>();
     private final Block startBlock;
     private final Block endBlock;
     private final String name;
@@ -65,5 +66,17 @@ public class IrGraph {
     /// {@return the name of this graph}
     public String name() {
         return name;
+    }
+
+    public void setOrigin(Node node, Name variable) {
+        this.origins.put(node, variable);
+    }
+
+    public Name origin(Node node) {
+        return this.origins.get(node);
+    }
+
+    public Map<Node, Name> origins() {
+        return Map.copyOf(this.origins);
     }
 }

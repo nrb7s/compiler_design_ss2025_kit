@@ -8,6 +8,7 @@ import edu.kit.kastel.vads.compiler.ir.node.Node;
 import edu.kit.kastel.vads.compiler.ir.node.ProjNode;
 import edu.kit.kastel.vads.compiler.ir.node.ReturnNode;
 import edu.kit.kastel.vads.compiler.ir.node.StartNode;
+import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.ir.PhiElimination;
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 import java.util.HashMap;
@@ -18,11 +19,15 @@ import java.util.Set;
 public class AasmRegisterAllocator implements RegisterAllocator {
     private int id;
     private final Map<Node, Register> registers = new HashMap<>();
+    private IrGraph graph;
+    private final Map<Name, Register> variableRegs = new HashMap<>();
 
     @Override
     public Map<Node, Register> allocateRegisters(IrGraph graph) {
         this.id = 0;
+        this.graph = graph;
         this.registers.clear();
+        this.variableRegs.clear();
         Set<Node> visited = new HashSet<>();
         for (Block block : graph.blocks()) {
             for (Node node : block.nodes()) {
@@ -45,11 +50,21 @@ public class AasmRegisterAllocator implements RegisterAllocator {
             if (r == null) r = new VirtualRegister(this.id++);
             registers.put(src, r);
             registers.put(dst, r);
+            Name srcVar = graph.origin(src);
+            Name dstVar = graph.origin(dst);
+            if (srcVar != null) variableRegs.putIfAbsent(srcVar, r);
+            if (dstVar != null) variableRegs.putIfAbsent(dstVar, r);
             // System.out.println("reg " + r + " for copy src=" + src + " dst=" + dst);
             return;
         }
         if (needsRegister(node) && !registers.containsKey(node)) {
-            Register r = new VirtualRegister(this.id++);
+            Name var = graph.origin(node);
+            Register r;
+            if (var != null) {
+                r = variableRegs.computeIfAbsent(var, _ -> new VirtualRegister(this.id++));
+            } else {
+                r = new VirtualRegister(this.id++);
+            }
             registers.put(node, r);
             // System.out.println("reg " + r + " for node " + node);
         }

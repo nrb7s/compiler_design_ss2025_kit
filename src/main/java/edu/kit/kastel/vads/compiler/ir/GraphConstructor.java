@@ -188,6 +188,9 @@ public class GraphConstructor {
     void writeVariable(Name variable, Block block, Node value) {
         // System.out.println("WRITE " + variable.asString() + " in " + block.getId() + " -> " + value);
         this.currentDef.computeIfAbsent(variable, _ -> new HashMap<>()).put(block, value);
+        if (this.graph.origin(value) == null) {
+            this.graph.setOrigin(value, variable);
+        }
     }
 
     Node readVariable(Name variable, Block block) {
@@ -202,11 +205,13 @@ public class GraphConstructor {
         Node val;
         if (!this.sealedBlocks.contains(block)) {
             val = new Phi(block);
+            this.graph.setOrigin(val, variable);
             this.incompletePhis.computeIfAbsent(block, _ -> new HashMap<>()).put(variable, (Phi) val);
         } else if (block.predecessors().size() == 1) {
             val = readVariable(variable, block.predecessors().getFirst().block());
         } else {
             val = new Phi(block);
+            this.graph.setOrigin(val, variable);
             writeVariable(variable, block, val);
             val = addPhiOperands(variable, (Phi) val);
         }
@@ -215,6 +220,9 @@ public class GraphConstructor {
     }
 
     Node addPhiOperands(Name variable, Phi phi) {
+        if (this.graph.origin(phi) == null) {
+            this.graph.setOrigin(phi, variable);
+        }
         for (Node pred : phi.block().predecessors()) {
             phi.appendOperand(readVariable(variable, pred.block()));
         }
