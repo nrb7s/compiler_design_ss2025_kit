@@ -80,6 +80,6 @@ public class Namespace<T> {
     }
 
     public @Nullable T get(NameTree name) {
-        return this.content.get(name.name());
+        return get(name.name());
     }
 }

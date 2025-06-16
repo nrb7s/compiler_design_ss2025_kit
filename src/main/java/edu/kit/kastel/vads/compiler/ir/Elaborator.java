@@ -67,9 +67,17 @@ public final class Elaborator {
                 loopBody
         );
 
-        return init == null
-                ? whileLoop
-                : toBlock(List.of(elaborateStmt(init), whileLoop));
+        if (init == null) {
+            return whileLoop;
+        }
+
+        StatementTree elaboratedInit = elaborateStmt(init);
+        if (elaboratedInit instanceof BlockTree b) {
+            List<StatementTree> stmts = new ArrayList<>(b.statements());
+            stmts.add(whileLoop);
+            return toBlock(stmts);
+        }
+        return toBlock(List.of(elaboratedInit, whileLoop));
     }
 
     private static StatementTree elaborateDecl(DeclarationTree decl) {
