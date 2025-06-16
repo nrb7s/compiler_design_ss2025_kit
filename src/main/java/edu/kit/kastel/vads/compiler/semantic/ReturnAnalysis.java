@@ -8,10 +8,6 @@ import edu.kit.kastel.vads.compiler.parser.visitor.Unit;
 /// Currently only works for straight-line code.
 class ReturnAnalysis implements NoOpVisitor<Unit> {
 
-    static class ReturnState {
-        boolean returns = false;
-    }
-
     @Override
     public Unit visit(FunctionTree functionTree, Unit data) {
         if (!alwaysReturns(functionTree.body())) {
@@ -36,14 +32,19 @@ class ReturnAnalysis implements NoOpVisitor<Unit> {
             case IfTree i -> i.elseBranch() != null
                     && alwaysReturns(i.thenBranch())
                     && alwaysReturns(i.elseBranch());
-            case WhileLoopTree w -> alwaysReturns(w.body());
+            case WhileLoopTree w -> {
+                alwaysReturns(w.body());
+                yield false;
+            }
             case ForLoopTree f -> {
-                if (f.init() != null && alwaysReturns(f.init())) {
-                    yield true;
+                if (f.init() != null) {
+                    alwaysReturns(f.init());
                 }
-                boolean bodyReturns = alwaysReturns(f.body());
-                boolean stepReturns = f.step() != null && alwaysReturns(f.step());
-                yield bodyReturns || stepReturns;
+                alwaysReturns(f.body());
+                if (f.step() != null) {
+                    alwaysReturns(f.step());
+                }
+                yield false;
             }
             default -> false;
         };
