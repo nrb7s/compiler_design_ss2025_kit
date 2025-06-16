@@ -193,24 +193,20 @@ public class GraphConstructor {
     Node readVariable(Name variable, Block block) {
         Node node = this.currentDef.getOrDefault(variable, Map.of()).get(block);
         if (node != null) {
-            // System.out.println("READ " + variable.asString() + " in " + block.getId() + " -> " + node);
             return node;
         }
-        Node val = readVariableRecursive(variable, block);
-        // System.out.println("READ " + variable.asString() + " in " + block.getId() + " -> " + val);
-        return val;
+        return readVariableRecursive(variable, block);
     }
-
 
     private Node readVariableRecursive(Name variable, Block block) {
         Node val;
         if (!this.sealedBlocks.contains(block)) {
-            val = newPhi();
+            val = new Phi(block);
             this.incompletePhis.computeIfAbsent(block, _ -> new HashMap<>()).put(variable, (Phi) val);
         } else if (block.predecessors().size() == 1) {
             val = readVariable(variable, block.predecessors().getFirst().block());
         } else {
-            val = newPhi();
+            val = new Phi(block);
             writeVariable(variable, block, val);
             val = addPhiOperands(variable, (Phi) val);
         }
@@ -261,6 +257,10 @@ public class GraphConstructor {
         for (Map.Entry<Name, Phi> entry : this.incompletePhis.getOrDefault(block, Map.of()).entrySet()) {
             addPhiOperands(entry.getKey(), entry.getValue());
         }
+        Phi sideEffectPhi = this.incompleteSideEffectPhis.get(block);
+        if (sideEffectPhi != null) {
+            addPhiOperands(sideEffectPhi);
+        }
         this.sealedBlocks.add(block);
     }
 
@@ -296,13 +296,13 @@ public class GraphConstructor {
     private Node readSideEffectRecursive(Block block) {
         Node val;
         if (!this.sealedBlocks.contains(block)) {
-            val = newPhi();
+            val = new Phi(block);
             Phi old = this.incompleteSideEffectPhis.put(block, (Phi) val);
             assert old == null : "double readSideEffectRecursive for " + block;
         } else if (block.predecessors().size() == 1) {
             val = readSideEffect(block.predecessors().getFirst().block());
         } else {
-            val = newPhi();
+            val = new Phi(block);
             writeSideEffect(block, val);
             val = addPhiOperands((Phi) val);
         }
