@@ -4,8 +4,10 @@ import edu.kit.kastel.vads.compiler.backend.regalloc.Register;
 import edu.kit.kastel.vads.compiler.ir.IrGraph;
 import edu.kit.kastel.vads.compiler.ir.PhiElimination;
 import edu.kit.kastel.vads.compiler.ir.node.*;
+import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static edu.kit.kastel.vads.compiler.ir.util.NodeSupport.predecessorSkipProj;
 
@@ -25,19 +27,21 @@ public class CodeGenerator {
         for (IrGraph graph : program) {
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
-
-            Set<Integer> spillIds = new TreeSet<>();
-            for (Register r : registers.values()) {
-                int id = ((VirtualRegister) r).id();
-                if (id >= PHYS_REG_COUNT) spillIds.add(id);
+            Map<Integer, Integer> spillOffset = new HashMap<>();
+            Map<Name, Integer> varOffset = new HashMap<>();
+            AtomicInteger nextIdx = new AtomicInteger(1);
+            for (Map.Entry<Node, Register> e : registers.entrySet()) {
+                int id = ((VirtualRegister) e.getValue()).id();
+                if (id < PHYS_REG_COUNT) continue;
+                Name origin = graph.origin(e.getKey());
+                if (origin != null) {
+                    spillOffset.computeIfAbsent(id, _ ->
+                            varOffset.computeIfAbsent(origin, __ -> nextIdx.getAndIncrement() * 4));
+                } else {
+                    spillOffset.computeIfAbsent(id, _ -> nextIdx.getAndIncrement() * 4);
+                }
             }
-            Map<Integer,Integer> spillOffset = new HashMap<>();
-            int index = 1;
-            for (int id : spillIds) {
-                spillOffset.put(id, index * 4); // 4 bytes per spill slot
-                index++;
-            }
-            int totalSpillBytes = spillOffset.size() * 4;
+            int totalSpillBytes = nextIdx.get() == 1 ? 0 : (nextIdx.get() - 1) * 4;
 
             // Prologue and reserve stack for spilling
             builder.append("\t.globl ").append(graph.name()).append("\n");
