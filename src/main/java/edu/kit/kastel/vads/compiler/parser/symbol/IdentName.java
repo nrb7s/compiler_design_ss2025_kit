@@ -1,8 +1,17 @@
 package edu.kit.kastel.vads.compiler.parser.symbol;
 
-record IdentName(String identifier) implements Name {
-    @Override
-    public String asString() {
-        return identifier();
+import java.util.concurrent.atomic.AtomicInteger;
+
+public final class IdentName implements Name {
+    private static final AtomicInteger NEXT_ID = new AtomicInteger();
+    private final String value;
+    private final int id;
+    public IdentName(String value) {
+        this.value = value;
+        this.id = NEXT_ID.getAndIncrement();
     }
+    @Override public String asString() { return value; }
+    @Override public String toString() { return value + "#" + id; }
+    @Override public boolean equals(Object o) { return this == o; }
+    @Override public int hashCode() { return System.identityHashCode(this); }
 }

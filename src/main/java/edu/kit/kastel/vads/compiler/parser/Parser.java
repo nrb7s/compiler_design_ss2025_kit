@@ -5,30 +5,37 @@ import edu.kit.kastel.vads.compiler.lexer.Operator.OperatorType;
 import edu.kit.kastel.vads.compiler.lexer.Separator.SeparatorType;
 import edu.kit.kastel.vads.compiler.Span;
 import edu.kit.kastel.vads.compiler.parser.ast.*;
-import edu.kit.kastel.vads.compiler.parser.ast.AssignmentTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BlockTree;
-import edu.kit.kastel.vads.compiler.parser.ast.BreakTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ContinueTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ExpressionStatementTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ExpressionTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ForLoopTree;
-import edu.kit.kastel.vads.compiler.parser.ast.IfTree;
-import edu.kit.kastel.vads.compiler.parser.ast.WhileLoopTree;
-import edu.kit.kastel.vads.compiler.parser.ast.LiteralTree;
-import edu.kit.kastel.vads.compiler.parser.ast.ReturnTree;
-import edu.kit.kastel.vads.compiler.parser.ast.StatementTree;
+import edu.kit.kastel.vads.compiler.parser.symbol.IdentName;
 import edu.kit.kastel.vads.compiler.parser.symbol.Name;
 import edu.kit.kastel.vads.compiler.parser.type.BasicType;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Parser {
     private final TokenSource tokenSource;
     private Token lastConsumed = new ErrorToken("uninitialized", Span.DUMMY);
 
+    private final Deque<Map<String, Name>> scopes = new ArrayDeque<>();
+
     public Parser(TokenSource tokenSource) {
         this.tokenSource = tokenSource;
+    }
+
+    private void enterScope() { scopes.push(new HashMap<>()); }
+    private void leaveScope() { scopes.pop(); }
+
+    private Name declareName(Identifier id) {
+        Name name = new IdentName(id.value());
+        scopes.peek().put(id.value(), name);
+        return name;
+    }
+
+    private Name lookup(String ident) {
+        for (var it = scopes.descendingIterator(); it.hasNext(); ) {
+            Map<String, Name> scope = it.next();
+            if (scope.containsKey(ident)) return scope.get(ident);
+        }
+        return null;
     }
 
     private Token consume() {
@@ -39,7 +46,9 @@ public class Parser {
     private Token previous() { return lastConsumed; }
 
     public ProgramTree parseProgram() {
+        enterScope();
         ProgramTree programTree = new ProgramTree(List.of(parseFunction()));
+        leaveScope();
         if (this.tokenSource.hasMore()) {
             throw new ParseException("expected end of input but got " + this.tokenSource.peek());
         }
@@ -54,20 +63,26 @@ public class Parser {
         }
         this.tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
         this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+
+        enterScope();
+        Name funcName = declareName(identifier);
         BlockTree body = parseBlock();
+        leaveScope();
         return new FunctionTree(
             new TypeTree(BasicType.INT, returnType.span()),
-            name(identifier),
+            new NameTree(funcName, identifier.span()),
             body
         );
     }
 
     private BlockTree parseBlock() {
         Separator bodyOpen = this.tokenSource.expectSeparator(SeparatorType.BRACE_OPEN);
+        enterScope();
         List<StatementTree> statements = new ArrayList<>();
         while (!(this.tokenSource.peek() instanceof Separator sep && sep.type() == SeparatorType.BRACE_CLOSE)) {
             statements.add(parseStatement());
         }
+        leaveScope();
         Separator bodyClose = this.tokenSource.expectSeparator(SeparatorType.BRACE_CLOSE);
         return new BlockTree(statements, bodyOpen.span().merge(bodyClose.span()));
     }
@@ -86,9 +101,13 @@ public class Parser {
             tokenSource.expectOperator(OperatorType.ASSIGN);
             init = parseExpression();
         }
+
+        Name declName = declareName(id);
+        // scopes.peek().put(id.value(), declName);
+
         return new DeclarationTree(
                 new TypeTree(type, kw.span()),
-                name(id),
+                new NameTree(declName, id.span()),
                 init
         );
     }
@@ -249,7 +268,7 @@ public class Parser {
             return inner;
         }
         Identifier identifier = this.tokenSource.expectIdentifier();
-        return new LValueIdentTree(name(identifier));
+        return new LValueIdentTree(lookupName(identifier));
     }
 
     private StatementTree parseReturn() {
@@ -410,20 +429,6 @@ public class Parser {
             throw new ParseException("Expected operator " + type);
         }
     }
-    /*
-    private ExpressionTree parseExpression() {
-        ExpressionTree lhs = parseTerm();
-        while (true) {
-            if (this.tokenSource.peek() instanceof Operator(var type, _)
-                && (type == OperatorType.PLUS || type == OperatorType.MINUS)) {
-                this.tokenSource.consume();
-                lhs = new BinaryOperationTree(lhs, parseTerm(), type);
-            } else {
-                return lhs;
-            }
-        }
-    }
-     */
 
     private ExpressionTree parseTerm() {
         ExpressionTree lhs = parseFactor();
@@ -453,7 +458,7 @@ public class Parser {
             }
             case Identifier ident -> {
                 this.tokenSource.consume();
-                yield new IdentExpressionTree(name(ident));
+                yield new IdentExpressionTree(lookupName(ident));
             }
             case NumberLiteral(String value, int base, Span span) -> {
                 this.tokenSource.consume();
@@ -476,42 +481,13 @@ public class Parser {
             }
         };
         return result;
-        /*
-        return switch (this.tokenSource.peek()) {
-            case Separator(var type, _) when type == SeparatorType.PAREN_OPEN -> {
-                this.tokenSource.consume();
-                ExpressionTree expression = parseExpression();
-                this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
-                yield expression;
-            }
-            case Operator(var type, _) when type == OperatorType.MINUS -> {
-                Span span = this.tokenSource.consume().span();
-                yield new NegateTree(parseFactor(), span);
-            }
-            case Identifier ident -> {
-                this.tokenSource.consume();
-                yield new IdentExpressionTree(name(ident));
-            }
-            case NumberLiteral(String value, int base, Span span) -> {
-                this.tokenSource.consume();
-                yield new LiteralTree(value, base, span);
-            }
-            case Keyword(var kw, var span) when kw == KeywordType.TRUE -> {
-                consume();
-                yield new BooleanLiteralTree(true, span);
-            }
-            case Keyword(var kw, var span) when kw == KeywordType.FALSE -> {
-                consume();
-                yield new BooleanLiteralTree(false, span);
-            }
-            case Keyword(var kw, var span) when kw == KeywordType.NULL -> {
-                consume();
-                yield new LiteralTree("NULL", 10, span);
-            }
-            case Token t -> throw new ParseException("invalid factor " + t);
-        };
+    }
 
-         */
+    private NameTree lookupName(Identifier ident) {
+        Name name = lookup(ident.value());
+        if (name == null)
+            throw new ParseException("Variable " + ident.value() + " not declared");
+        return new NameTree(name, ident.span());
     }
 
     private static NameTree name(Identifier ident) {

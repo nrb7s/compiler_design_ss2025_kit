@@ -19,6 +19,8 @@ public class CodeGenerator {
     };
     private static final String TEMP_REG_1 = "%esi";
     private static final String TEMP_REG_2 = "%edi";
+    // Assign slot for every variable (declaration) only once
+    Map<Node, Integer> slotOffset = new HashMap<>();
 
     public String generateAssembly(List<IrGraph> program) {
         StringBuilder builder = new StringBuilder();
@@ -28,23 +30,11 @@ public class CodeGenerator {
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
 
-            // For each unique variable (with Name origin), assign a unique slot
-            Map<Name, Integer> varOffset = new HashMap<>();
-            // For each SSA temp node without origin, assign a unique slot
-            Map<Node, Integer> tmpOffset = new HashMap<>();
             AtomicInteger nextSlot = new AtomicInteger(1);
 
-            // Assign slot for every variable (declaration) only once
             for (Node n : registers.keySet()) {
-                Name origin = graph.origin(n);
-                if (origin != null) {
-                    varOffset.computeIfAbsent(origin, __ -> nextSlot.getAndIncrement() * 4);
-                }
-            }
-            // Assign slot for every temp SSA node without origin (Add, Mul, etc.)
-            for (Node n : registers.keySet()) {
-                if (graph.origin(n) == null && needsSpill(n)) {
-                    tmpOffset.computeIfAbsent(n, __ -> nextSlot.getAndIncrement() * 4);
+                if (needsSpill(n)) {
+                    slotOffset.computeIfAbsent(n, __ -> nextSlot.getAndIncrement() * 4);
                 }
             }
 
@@ -63,7 +53,7 @@ public class CodeGenerator {
             Block entry = graph.blocks().get(0);
             builder.append("\tjmp L").append(entry.getId()).append("\n");
 
-            generateAssemblyForGraph(graph, builder, registers, varOffset, tmpOffset);
+            generateAssemblyForGraph(graph, builder, registers, slotOffset);
 
             // Epilogue
             builder.append("\tmovq %rbp, %rsp\n")
@@ -85,8 +75,7 @@ public class CodeGenerator {
 
     private void generateAssemblyForGraph(IrGraph graph, StringBuilder b,
                                           Map<Node, Register> regs,
-                                          Map<Name, Integer> varOffset,
-                                          Map<Node, Integer> tmpOffset) {
+                                          Map<Node, Integer> slotOffset) {
         Set<Block> visited = new HashSet<>();
         Deque<Block> work = new ArrayDeque<>();
         work.add(graph.startBlock());
@@ -95,7 +84,7 @@ public class CodeGenerator {
             if (!visited.add(blk)) continue;
             b.append("L").append(blk.getId()).append(":\n");
             for (Node n : blk.nodes()) {
-                scanAsm(n, b, regs, varOffset, tmpOffset, graph);
+                scanAsm(n, b, regs, slotOffset, graph);
             }
             List<Node> nodes = blk.nodes();
             if (!nodes.isEmpty()) {
@@ -115,33 +104,32 @@ public class CodeGenerator {
 
     private void scanAsm(Node node, StringBuilder builder,
                          Map<Node, Register> registers,
-                         Map<Name, Integer> varOffset,
-                         Map<Node, Integer> tmpOffset,
+                         Map<Node, Integer> slotOffset,
                          IrGraph graph) {
         switch (node) {
-            case AddNode add -> binaryAsm(builder, registers, add, "addl", varOffset, tmpOffset, graph);
-            case SubNode sub -> binaryAsm(builder, registers, sub, "subl", varOffset, tmpOffset, graph);
-            case MulNode mul -> binaryAsm(builder, registers, mul, "imull", varOffset, tmpOffset, graph);
-            case DivNode div -> divide(builder, registers, div, varOffset, tmpOffset, graph);
-            case ModNode mod -> mod(builder, registers, mod, varOffset, tmpOffset, graph);
-            case CmpGTNode gt -> genCmpSet(builder, registers, varOffset, tmpOffset, graph, gt, "setg");
-            case CmpGENode ge -> genCmpSet(builder, registers, varOffset, tmpOffset, graph, ge, "setge");
-            case CmpLTNode lt -> genCmpSet(builder, registers, varOffset, tmpOffset, graph, lt, "setl");
-            case CmpLENode le -> genCmpSet(builder, registers, varOffset, tmpOffset, graph, le, "setle");
-            case CmpEQNode eq -> genCmpSet(builder, registers, varOffset, tmpOffset, graph, eq, "sete");
-            case CmpNENode ne -> genCmpSet(builder, registers, varOffset, tmpOffset, graph, ne, "setne");
-            case AndNode and -> binaryAsm(builder, registers, and, "andl", varOffset, tmpOffset, graph);
-            case OrNode or -> binaryAsm(builder, registers, or, "orl", varOffset, tmpOffset, graph);
-            case XorNode xor -> binaryAsm(builder, registers, xor, "xorl", varOffset, tmpOffset, graph);
-            case ShlNode shl -> shiftAsm(builder, registers, shl, "shll", varOffset, tmpOffset, graph);
-            case ShrNode shr -> shiftAsm(builder, registers, shr, "sarl", varOffset, tmpOffset, graph);
+            case AddNode add -> binaryAsm(builder, registers, add, "addl", slotOffset, graph);
+            case SubNode sub -> binaryAsm(builder, registers, sub, "subl", slotOffset, graph);
+            case MulNode mul -> binaryAsm(builder, registers, mul, "imull", slotOffset, graph);
+            case DivNode div -> divide(builder, registers, div, slotOffset, graph);
+            case ModNode mod -> mod(builder, registers, mod, slotOffset, graph);
+            case CmpGTNode gt -> genCmpSet(builder, registers, slotOffset, graph, gt, "setg");
+            case CmpGENode ge -> genCmpSet(builder, registers, slotOffset, graph, ge, "setge");
+            case CmpLTNode lt -> genCmpSet(builder, registers, slotOffset, graph, lt, "setl");
+            case CmpLENode le -> genCmpSet(builder, registers, slotOffset, graph, le, "setle");
+            case CmpEQNode eq -> genCmpSet(builder, registers, slotOffset, graph, eq, "sete");
+            case CmpNENode ne -> genCmpSet(builder, registers, slotOffset, graph, ne, "setne");
+            case AndNode and -> binaryAsm(builder, registers, and, "andl", slotOffset, graph);
+            case OrNode or -> binaryAsm(builder, registers, or, "orl", slotOffset, graph);
+            case XorNode xor -> binaryAsm(builder, registers, xor, "xorl", slotOffset, graph);
+            case ShlNode shl -> shiftAsm(builder, registers, shl, "shll", slotOffset, graph);
+            case ShrNode shr -> shiftAsm(builder, registers, shr, "sarl", slotOffset, graph);
             case BitwiseNotNode bn -> {
-                String r = regAllocate(bn.operand(), registers, varOffset, tmpOffset, graph);
+                String r = regAllocate(bn.operand(), registers, slotOffset, graph);
                 builder.append("\tnotl ").append(r).append("\n");
             }
             case LogicalNotNode ln -> {
-                String src = regAllocate(ln.operand(), registers, varOffset, tmpOffset, graph);
-                String dst = regAllocate(ln, registers, varOffset, tmpOffset, graph);
+                String src = regAllocate(ln.operand(), registers, slotOffset, graph);
+                String dst = regAllocate(ln, registers, slotOffset, graph);
                 builder.append("\tcmpl $0, ").append(src).append("\n")
                         .append("\tsete %al\n");
                 if (isMemory(dst)) {
@@ -152,7 +140,7 @@ public class CodeGenerator {
                 }
             }
             case CondJumpNode cj -> {
-                String condReg = regAllocate(cj.condition(), registers, varOffset, tmpOffset, graph);
+                String condReg = regAllocate(cj.condition(), registers, slotOffset, graph);
                 builder.append("\tcmpl $0, ").append(condReg).append("\n")
                         .append("\tjne L").append(cj.trueTarget().getId()).append("\n")
                         .append("\tjmp L").append(cj.falseTarget().getId()).append("\n");
@@ -160,11 +148,11 @@ public class CodeGenerator {
             case PhiElimination.CopyNode copy -> {
                 String src = regAllocate(
                         predecessorSkipProj(copy, PhiElimination.CopyNode.SRC),
-                        registers, varOffset, tmpOffset, graph
+                        registers, slotOffset, graph
                 );
                 String dst = regAllocate(
                         predecessorSkipProj(copy, PhiElimination.CopyNode.DST),
-                        registers, varOffset, tmpOffset, graph
+                        registers, slotOffset, graph
                 );
                 if (!src.equals(dst)) {
                     if (isMemory(src) && isMemory(dst)) {
@@ -181,14 +169,14 @@ public class CodeGenerator {
             case ReturnNode r -> {
                 Node res = predecessorSkipProj(r, ReturnNode.RESULT);
                 builder.append("\tmovl ")
-                        .append(regAllocate(res, registers, varOffset, tmpOffset, graph))
+                        .append(regAllocate(res, registers, slotOffset, graph))
                         .append(", %eax\n");
                 builder.append("\tmovq %rbp, %rsp\n")
                         .append("\tpop %rbp\n")
                         .append("\tret\n");
             }
             case ConstIntNode c -> {
-                String dest = regAllocate(c, registers, varOffset, tmpOffset, graph);
+                String dest = regAllocate(c, registers, slotOffset, graph);
                 builder.append("\tmovl $").append(c.value())
                         .append(", ").append(dest)
                         .append("\n");
@@ -198,10 +186,9 @@ public class CodeGenerator {
         }
     }
 
-    // For a variable node with origin, use varOffset; for a temp node without origin, use tmpOffset
+    // For a variable node with origin, use slotOffset; for a temp node without origin, use slotOffset
     private static String regAllocate(Node node, Map<Node, Register> registers,
-                                      Map<Name, Integer> varOffset,
-                                      Map<Node, Integer> tmpOffset,
+                                      Map<Node, Integer> slotOffset,
                                       IrGraph graph) {
         Register r = registers.get(node);
         if (r == null) {
@@ -211,26 +198,23 @@ public class CodeGenerator {
         if (id < PHYS_REG_COUNT) {
             return PHYS_REGS[id];
         } else {
-            Name origin = graph.origin(node);
-            if (origin != null) {
-                int off = varOffset.get(origin);
-                return "-" + off + "(%rbp)";
-            } else {
-                int off = tmpOffset.get(node);
-                return "-" + off + "(%rbp)";
+            Integer off = slotOffset.get(node);
+            if (off == null) {
+                throw new IllegalStateException("Missing slot for node " + node);
             }
+            return "-" + off + "(%rbp)";
         }
     }
 
     // Helper for binary operations (add, sub, and, or, etc.)
     private static void binaryAsm(StringBuilder builder, Map<Node, Register> registers, Node node, String operation,
-                                  Map<Name, Integer> varOffset, Map<Node, Integer> tmpOffset, IrGraph graph) {
+                                  Map<Node, Integer> slotOffset, IrGraph graph) {
         Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
         Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
 
-        String lhs = regAllocate(leftNode, registers, varOffset, tmpOffset, graph);
-        String rhs = regAllocate(rightNode, registers, varOffset, tmpOffset, graph);
-        String dest = regAllocate(node, registers, varOffset, tmpOffset, graph);
+        String lhs = regAllocate(leftNode, registers, slotOffset, graph);
+        String rhs = regAllocate(rightNode, registers, slotOffset, graph);
+        String dest = regAllocate(node, registers, slotOffset, graph);
 
         if (!dest.equals(lhs)) {
             if (isMemory(lhs) && isMemory(dest)) {
@@ -266,13 +250,13 @@ public class CodeGenerator {
 
     // For division
     private static void divide(StringBuilder builder, Map<Node, Register> registers, Node node,
-                               Map<Name, Integer> varOffset, Map<Node, Integer> tmpOffset, IrGraph graph) {
+                               Map<Node, Integer> slotOffset, IrGraph graph) {
         Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
         Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
 
-        String dividend = regAllocate(leftNode, registers, varOffset, tmpOffset, graph);
-        String rawDivisor = regAllocate(rightNode, registers, varOffset, tmpOffset, graph);
-        String dest = regAllocate(node, registers, varOffset, tmpOffset, graph);
+        String dividend = regAllocate(leftNode, registers, slotOffset, graph);
+        String rawDivisor = regAllocate(rightNode, registers, slotOffset, graph);
+        String dest = regAllocate(node, registers, slotOffset, graph);
         String divisor = rawDivisor;
 
         // Avoid mem/mem
@@ -289,13 +273,13 @@ public class CodeGenerator {
 
     // For modulus
     private static void mod(StringBuilder builder, Map<Node, Register> registers, Node node,
-                            Map<Name, Integer> varOffset, Map<Node, Integer> tmpOffset, IrGraph graph) {
+                            Map<Node, Integer> slotOffset, IrGraph graph) {
         Node leftNode = predecessorSkipProj(node, BinaryOperationNode.LEFT);
         Node rightNode = predecessorSkipProj(node, BinaryOperationNode.RIGHT);
 
-        String dividend = regAllocate(leftNode, registers, varOffset, tmpOffset, graph);
-        String rawDivisor = regAllocate(rightNode, registers, varOffset, tmpOffset, graph);
-        String dest = regAllocate(node, registers, varOffset, tmpOffset, graph);
+        String dividend = regAllocate(leftNode, registers, slotOffset, graph);
+        String rawDivisor = regAllocate(rightNode, registers, slotOffset, graph);
+        String dest = regAllocate(node, registers, slotOffset, graph);
         String divisor = rawDivisor;
 
         if (isMemory(rawDivisor) || rawDivisor.equals("%edx") || rawDivisor.equals("%eax")) {
@@ -311,12 +295,12 @@ public class CodeGenerator {
 
     // For comparisons
     private static void genCmpSet(StringBuilder b, Map<Node, Register> regs,
-                                  Map<Name, Integer> varOffset, Map<Node, Integer> tmpOffset, IrGraph graph,
+                                  Map<Node, Integer> slotOffset, IrGraph graph,
                                   BinaryOperationNode cmp, String setInstr) {
 
-        String lhs = regAllocate(predecessorSkipProj(cmp, BinaryOperationNode.LEFT), regs, varOffset, tmpOffset, graph);
-        String rhs = regAllocate(predecessorSkipProj(cmp, BinaryOperationNode.RIGHT), regs, varOffset, tmpOffset, graph);
-        String dst = regAllocate(cmp, regs, varOffset, tmpOffset, graph);
+        String lhs = regAllocate(predecessorSkipProj(cmp, BinaryOperationNode.LEFT), regs, slotOffset, graph);
+        String rhs = regAllocate(predecessorSkipProj(cmp, BinaryOperationNode.RIGHT), regs, slotOffset, graph);
+        String dst = regAllocate(cmp, regs, slotOffset, graph);
 
         if (isMemory(lhs) && isMemory(rhs)) {
             b.append("\tmovl ").append(rhs).append(", %esi\n");
@@ -338,14 +322,14 @@ public class CodeGenerator {
     // For shifts
     private static void shiftAsm(StringBuilder b, Map<Node, Register> regs,
                                  BinaryOperationNode sh, String instr,
-                                 Map<Name, Integer> varOffset, Map<Node, Integer> tmpOffset, IrGraph graph) {
+                                 Map<Node, Integer> slotOffset, IrGraph graph) {
 
         Node srcNode = predecessorSkipProj(sh, BinaryOperationNode.LEFT);
         Node amtNode = predecessorSkipProj(sh, BinaryOperationNode.RIGHT);
 
-        String src = regAllocate(srcNode, regs, varOffset, tmpOffset, graph);
-        String amt = regAllocate(amtNode, regs, varOffset, tmpOffset, graph);
-        String dst = regAllocate(sh, regs, varOffset, tmpOffset, graph);
+        String src = regAllocate(srcNode, regs, slotOffset, graph);
+        String amt = regAllocate(amtNode, regs, slotOffset, graph);
+        String dst = regAllocate(sh, regs, slotOffset, graph);
 
         if (!dst.equals(src))
             b.append("\tmovl ").append(src).append(", ").append(dst).append("\n");
