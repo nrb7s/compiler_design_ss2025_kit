@@ -43,7 +43,7 @@ public class CodeGenerator {
             }
             // Assign slot for every temp SSA node without origin (Add, Mul, etc.)
             for (Node n : registers.keySet()) {
-                if (graph.origin(n) == null && !(n instanceof ProjNode) && !(n instanceof StartNode) && !(n instanceof Block)) {
+                if (graph.origin(n) == null && needsSpill(n)) {
                     tmpOffset.computeIfAbsent(n, __ -> nextSlot.getAndIncrement() * 4);
                 }
             }
@@ -71,6 +71,16 @@ public class CodeGenerator {
                     .append("\tret\n\n");
         }
         return builder.toString();
+    }
+
+    // Only temporary SSA nodes
+    private boolean needsSpill(Node n) {
+        return !(n instanceof ProjNode
+                || n instanceof StartNode
+                || n instanceof Block
+                || n instanceof ReturnNode
+                || n instanceof PhiElimination.CopyNode
+                || n instanceof Phi);
     }
 
     private void generateAssemblyForGraph(IrGraph graph, StringBuilder b,
