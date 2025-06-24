@@ -54,7 +54,7 @@ public class AasmRegisterAllocator implements RegisterAllocator {
             Name dstVar = graph.origin(dst);
             if (srcVar != null) variableRegs.putIfAbsent(srcVar, r);
             if (dstVar != null) variableRegs.putIfAbsent(dstVar, r);
-            // System.out.println("reg " + r + " for copy src=" + src + " dst=" + dst);
+            System.out.println("reg " + r + " for copy src=" + src + " dst=" + dst);
             return;
         }
         if (needsRegister(node) && !registers.containsKey(node)) {
@@ -66,7 +66,7 @@ public class AasmRegisterAllocator implements RegisterAllocator {
                 r = new VirtualRegister(this.id++);
             }
             registers.put(node, r);
-            // System.out.println("reg " + r + " for node " + node);
+            System.out.println("reg " + r + " for node " + node);
         }
     }
 
