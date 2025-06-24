@@ -187,8 +187,8 @@ public class GraphConstructor {
 
     void writeVariable(Name variable, Block block, Node value) {
         // System.out.println("WRITE " + variable.asString() + " in " + block.getId() + " -> " + value);
+        if (this.graph.origin(value) == null) {this.graph.setOrigin(value, variable);}
         this.currentDef.computeIfAbsent(variable, _ -> new HashMap<>()).put(block, value);
-        // if (this.graph.origin(value) == null) {this.graph.setOrigin(value, variable);}
     }
 
     Node readVariable(Name variable, Block block) {
