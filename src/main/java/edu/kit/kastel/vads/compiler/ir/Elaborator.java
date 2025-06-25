@@ -94,7 +94,9 @@ public final class Elaborator {
                 new Operator(OperatorType.ASSIGN, decl.span()),
                 elaborateExpr(decl.initializer())
         );
-        return toBlock(List.of(noInit, initAssign));
+        // use a dummy span to mark this block as synthetic so that semantic
+        // analysis does not introduce a new scope
+        return new BlockTree(List.of(noInit, initAssign), Span.DUMMY);
     }
 
     private static BlockTree elaborateBlock(BlockTree block) {

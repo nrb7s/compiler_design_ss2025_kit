@@ -1,5 +1,6 @@
 package edu.kit.kastel.vads.compiler.semantic;
 
+import edu.kit.kastel.vads.compiler.Span;
 import edu.kit.kastel.vads.compiler.lexer.Operator;
 import edu.kit.kastel.vads.compiler.parser.ast.*;
 import edu.kit.kastel.vads.compiler.parser.visitor.NoOpVisitor;
@@ -107,6 +108,12 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
     // L2
     @Override
     public Unit visit(BlockTree blockTree, Namespace<VariableStatus> data) {
+        if (blockTree.span() == Span.DUMMY) {
+            for (StatementTree stmt : blockTree.statements()) {
+                stmt.accept(this, data);
+            }
+            return Unit.INSTANCE;
+        }
         Namespace<VariableStatus> scope = data.fork();
         for (StatementTree stmt : blockTree.statements()) {
             stmt.accept(this, scope);
