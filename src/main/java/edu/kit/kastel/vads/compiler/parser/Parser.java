@@ -25,8 +25,13 @@ public class Parser {
     private void leaveScope() { scopes.pop(); }
 
     private Name declareName(Identifier id) {
+        Map<String, Name> scope = scopes.peek();
+        Name existing = scope.get(id.value());
+        if (existing != null) {
+            return existing;
+        }
         Name name = new IdentName(id.value());
-        scopes.peek().put(id.value(), name);
+        scope.put(id.value(), name);
         return name;
     }
 
@@ -485,8 +490,10 @@ public class Parser {
 
     private NameTree lookupName(Identifier ident) {
         Name name = lookup(ident.value());
-        if (name == null)
-            throw new ParseException("Variable " + ident.value() + " not declared");
+        if (name == null) {
+            name = new IdentName(ident.value());
+            scopes.peek().put(ident.value(), name);
+        }
         return new NameTree(name, ident.span());
     }
 
