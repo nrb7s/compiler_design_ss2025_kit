@@ -166,15 +166,7 @@ public class CodeGenerator {
                 if (src == null || dst == null || src.equals(dst)) {
                     return;
                 }
-                if (isMemory(src) && isMemory(dst)) {
-                    builder.append("\tmovl ").append(src).append(", ")
-                            .append(TEMP_REG_1).append("\n");
-                    builder.append("\tmovl ").append(TEMP_REG_1)
-                            .append(", ").append(dst).append("\n");
-                } else {
-                    builder.append("\tmovl ").append(src)
-                            .append(", ").append(dst).append("\n");
-                }
+                emitMov(builder, src, dst);
             }
             case ReturnNode r -> {
                 Node res = predecessorSkipProj(r, ReturnNode.RESULT);
@@ -257,12 +249,7 @@ public class CodeGenerator {
         }
 
         if (!dest.equals(lhs)) {
-            if (isMemory(lhs) && isMemory(dest)) {
-                builder.append("\tmovl ").append(lhs).append(",").append(TEMP_REG_1).append("\n");
-                builder.append("\tmovl ").append(TEMP_REG_1).append(", ").append(dest).append("\n");
-            } else {
-                builder.append("\tmovl ").append(lhs).append(", ").append(dest).append("\n");
-            }
+            emitMov(builder, lhs, dest);
         }
 
         if (operation.equals("imull")) {
@@ -385,9 +372,9 @@ public class CodeGenerator {
             throw new IllegalStateException("Shift missing register: " + sh);
         }
 
-
-        if (!dst.equals(src))
-            b.append("\tmovl ").append(src).append(", ").append(dst).append("\n");
+        if (!dst.equals(src)) {
+            emitMov(b, src, dst);
+        }
         if (isMemory(amt) || !amt.equals("%ecx")) {
             b.append("\tmovl ").append(amt).append(", %ecx\n");
         }
@@ -399,5 +386,17 @@ public class CodeGenerator {
     // Helper to detect whether a string represents a memory location
     private static boolean isMemory(String s) {
         return s.contains("(%");
+    }
+
+    // Emit a mov instruction while avoiding memory-to-memory transfers
+    private static void emitMov(StringBuilder b, String src, String dst) {
+        if (isMemory(src) && isMemory(dst)) {
+            b.append("\tmovl ").append(src).append(", ")
+                    .append(TEMP_REG_1).append("\n");
+            b.append("\tmovl ").append(TEMP_REG_1)
+                    .append(", ").append(dst).append("\n");
+        } else {
+            b.append("\tmovl ").append(src).append(", ").append(dst).append("\n");
+        }
     }
 }
