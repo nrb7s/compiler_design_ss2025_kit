@@ -20,20 +20,19 @@ public class AasmRegisterAllocator implements RegisterAllocator {
     private int id;
     private final Map<Node, Register> registers = new HashMap<>();
     private IrGraph graph;
-    private final Map<Name, Register> variableRegs = new HashMap<>();
 
     @Override
     public Map<Node, Register> allocateRegisters(IrGraph graph) {
         this.id = 0;
         this.graph = graph;
         this.registers.clear();
-        this.variableRegs.clear();
         Set<Node> visited = new HashSet<>();
         for (Block block : graph.blocks()) {
             for (Node node : block.nodes()) {
                 scan(node, visited);
             }
         }
+        System.out.println("registers = " + this.registers);
         return Map.copyOf(this.registers);
     }
 
@@ -50,21 +49,11 @@ public class AasmRegisterAllocator implements RegisterAllocator {
             if (r == null) r = new VirtualRegister(this.id++);
             registers.put(src, r);
             registers.put(dst, r);
-            Name srcVar = graph.origin(src);
-            Name dstVar = graph.origin(dst);
-            if (srcVar != null) variableRegs.putIfAbsent(srcVar, r);
-            if (dstVar != null) variableRegs.putIfAbsent(dstVar, r);
             System.out.println("reg " + r + " for copy src=" + src + " dst=" + dst);
             return;
         }
         if (needsRegister(node) && !registers.containsKey(node)) {
-            Name var = graph.origin(node);
-            Register r;
-            if (var != null) {
-                r = variableRegs.computeIfAbsent(var, _ -> new VirtualRegister(this.id++));
-            } else {
-                r = new VirtualRegister(this.id++);
-            }
+            Register r = new VirtualRegister(this.id++);
             registers.put(node, r);
             System.out.println("reg " + r + " for node " + node);
         }
