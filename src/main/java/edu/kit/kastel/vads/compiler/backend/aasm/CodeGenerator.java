@@ -209,7 +209,18 @@ public class CodeGenerator {
                                       IrGraph graph) {
         Register r = registers.get(node);
         if (r == null) {
-            System.err.println("No register for node: " + node + " (" + node.getClass() + ")");
+            // Nodes that do not require a register simply return null
+            if (node instanceof Phi
+                    || node instanceof ProjNode
+                    || node instanceof StartNode
+                    || node instanceof Block
+                    || node instanceof ReturnNode
+                    || node instanceof PhiElimination.CopyNode) {
+                return null;
+            }
+            throw new IllegalStateException(
+                    "Register allocator did not assign a register to node " + node
+                            + " of type " + node.getClass().getSimpleName());
         }
         int id = ((VirtualRegister) r).id();
         if (id < PHYS_REG_COUNT) {

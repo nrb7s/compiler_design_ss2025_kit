@@ -1,12 +1,6 @@
 int main() {
-  int x = 0xFFAABBCC;
-
-  int y = x << 32;
-  int z = x >> 32;
-
-  if (x == y && x == z) {
-    return 50;
-  } else {
-    return -1;
-  }
+for(int x = 10; x/x > 0; x -= 1) {
+int a = 7;
+}
+return 0;
 }
