@@ -154,16 +154,17 @@ public class CodeGenerator {
                         predecessorSkipProj(copy, PhiElimination.CopyNode.DST),
                         registers, slotOffset, graph
                 );
-                if (!src.equals(dst)) {
-                    if (isMemory(src) && isMemory(dst)) {
-                        builder.append("\tmovl ").append(src).append(", ")
-                                .append(TEMP_REG_1).append("\n");
-                        builder.append("\tmovl ").append(TEMP_REG_1)
-                                .append(", ").append(dst).append("\n");
-                    } else {
-                        builder.append("\tmovl ").append(src)
-                                .append(", ").append(dst).append("\n");
-                    }
+                if (src == null || dst == null || src.equals(dst)) {
+                    return;
+                }
+                if (isMemory(src) && isMemory(dst)) {
+                    builder.append("\tmovl ").append(src).append(", ")
+                            .append(TEMP_REG_1).append("\n");
+                    builder.append("\tmovl ").append(TEMP_REG_1)
+                            .append(", ").append(dst).append("\n");
+                } else {
+                    builder.append("\tmovl ").append(src)
+                            .append(", ").append(dst).append("\n");
                 }
             }
             case ReturnNode r -> {
@@ -200,7 +201,15 @@ public class CodeGenerator {
         } else {
             Integer off = slotOffset.get(node);
             if (off == null) {
-                throw new IllegalStateException("Missing slot for node " + node);
+                if (node instanceof Phi
+                        || node instanceof ProjNode
+                        || node instanceof StartNode
+                        || node instanceof Block
+                        || node instanceof ReturnNode
+                        || node instanceof PhiElimination.CopyNode) {
+                    return null;
+                }
+                throw new IllegalStateException("No register for node: " + node + " (" + node.getClass() + ")");
             }
             return "-" + off + "(%rbp)";
         }
