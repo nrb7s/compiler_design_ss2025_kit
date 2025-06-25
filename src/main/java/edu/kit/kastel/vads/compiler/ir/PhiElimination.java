@@ -21,8 +21,7 @@ public final class PhiElimination {
                 if (!(n instanceof Phi phi)) continue;
                 Node dst = phi;
                 int idx = 0;
-                for (Node predNode : b.predecessors()) {
-                    Block pred = predNode.block();
+                for (Block pred : b.cfgPredecessors()) {
                     Node src = predecessorSkipProj(phi, idx++);
 
                     if (src == dst) continue;
@@ -38,15 +37,15 @@ public final class PhiElimination {
      private static List<Block> reversePostOrder(IrGraph g) {
          List<Block> order = new ArrayList<>();
          Set<Block> seen = new HashSet<>();
-         dfs(g.endBlock(), seen, order);
+         dfs(g.startBlock(), seen, order); // not reverse order
          Collections.reverse(order);
          return order;
      }
 
      private static void dfs(Block b, Set<Block> seen, List<Block> order) {
          if (!seen.add(b)) return;
-         for (Node predTerm : b.predecessors())
-             dfs(predTerm.block(), seen, order);
+         for (Block succ : b.cfgSuccessors())
+             dfs(succ, seen, order);
          order.add(b);
      }
 
