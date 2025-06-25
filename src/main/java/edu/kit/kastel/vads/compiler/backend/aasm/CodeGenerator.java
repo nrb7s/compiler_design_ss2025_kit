@@ -125,11 +125,17 @@ public class CodeGenerator {
             case ShrNode shr -> shiftAsm(builder, registers, shr, "sarl", slotOffset, graph);
             case BitwiseNotNode bn -> {
                 String r = regAllocate(bn.operand(), registers, slotOffset, graph);
+                if (r == null) {
+                    throw new IllegalStateException("BitwiseNot operand missing register: " + bn.operand());
+                }
                 builder.append("\tnotl ").append(r).append("\n");
             }
             case LogicalNotNode ln -> {
                 String src = regAllocate(ln.operand(), registers, slotOffset, graph);
                 String dst = regAllocate(ln, registers, slotOffset, graph);
+                if (src == null || dst == null) {
+                    throw new IllegalStateException("LogicalNot missing register: " + ln);
+                }
                 builder.append("\tcmpl $0, ").append(src).append("\n")
                         .append("\tsete %al\n");
                 if (isMemory(dst)) {
@@ -141,6 +147,9 @@ public class CodeGenerator {
             }
             case CondJumpNode cj -> {
                 String condReg = regAllocate(cj.condition(), registers, slotOffset, graph);
+                if (condReg == null) {
+                    throw new IllegalStateException("CondJump condition missing register: " + cj.condition());
+                }
                 builder.append("\tcmpl $0, ").append(condReg).append("\n")
                         .append("\tjne L").append(cj.trueTarget().getId()).append("\n")
                         .append("\tjmp L").append(cj.falseTarget().getId()).append("\n");
@@ -169,8 +178,12 @@ public class CodeGenerator {
             }
             case ReturnNode r -> {
                 Node res = predecessorSkipProj(r, ReturnNode.RESULT);
+                String val = regAllocate(res, registers, slotOffset, graph);
+                if (val == null) {
+                    throw new IllegalStateException("Return value missing register: " + res);
+                }
                 builder.append("\tmovl ")
-                        .append(regAllocate(res, registers, slotOffset, graph))
+                        .append(val)
                         .append(", %eax\n");
                 builder.append("\tmovq %rbp, %rsp\n")
                         .append("\tpop %rbp\n")
@@ -178,6 +191,9 @@ public class CodeGenerator {
             }
             case ConstIntNode c -> {
                 String dest = regAllocate(c, registers, slotOffset, graph);
+                if (dest == null) {
+                    throw new IllegalStateException("ConstInt missing register: " + c);
+                }
                 builder.append("\tmovl $").append(c.value())
                         .append(", ").append(dest)
                         .append("\n");
@@ -225,6 +241,10 @@ public class CodeGenerator {
         String rhs = regAllocate(rightNode, registers, slotOffset, graph);
         String dest = regAllocate(node, registers, slotOffset, graph);
 
+        if (lhs == null || rhs == null || dest == null) {
+            throw new IllegalStateException("Binary op missing register: " + node);
+        }
+
         if (!dest.equals(lhs)) {
             if (isMemory(lhs) && isMemory(dest)) {
                 builder.append("\tmovl ").append(lhs).append(",").append(TEMP_REG_1).append("\n");
@@ -266,6 +286,9 @@ public class CodeGenerator {
         String dividend = regAllocate(leftNode, registers, slotOffset, graph);
         String rawDivisor = regAllocate(rightNode, registers, slotOffset, graph);
         String dest = regAllocate(node, registers, slotOffset, graph);
+        if (dividend == null || rawDivisor == null || dest == null) {
+            throw new IllegalStateException("Divide missing register: " + node);
+        }
         String divisor = rawDivisor;
 
         // Avoid mem/mem
@@ -289,6 +312,9 @@ public class CodeGenerator {
         String dividend = regAllocate(leftNode, registers, slotOffset, graph);
         String rawDivisor = regAllocate(rightNode, registers, slotOffset, graph);
         String dest = regAllocate(node, registers, slotOffset, graph);
+        if (dividend == null || rawDivisor == null || dest == null) {
+            throw new IllegalStateException("Modulus missing register: " + node);
+        }
         String divisor = rawDivisor;
 
         if (isMemory(rawDivisor) || rawDivisor.equals("%edx") || rawDivisor.equals("%eax")) {
@@ -310,6 +336,10 @@ public class CodeGenerator {
         String lhs = regAllocate(predecessorSkipProj(cmp, BinaryOperationNode.LEFT), regs, slotOffset, graph);
         String rhs = regAllocate(predecessorSkipProj(cmp, BinaryOperationNode.RIGHT), regs, slotOffset, graph);
         String dst = regAllocate(cmp, regs, slotOffset, graph);
+
+        if (lhs == null || rhs == null || dst == null) {
+            throw new IllegalStateException("Comparison missing register: " + cmp);
+        }
 
         if (isMemory(lhs) && isMemory(rhs)) {
             b.append("\tmovl ").append(rhs).append(", %esi\n");
@@ -339,6 +369,11 @@ public class CodeGenerator {
         String src = regAllocate(srcNode, regs, slotOffset, graph);
         String amt = regAllocate(amtNode, regs, slotOffset, graph);
         String dst = regAllocate(sh, regs, slotOffset, graph);
+
+        if (src == null || amt == null || dst == null) {
+            throw new IllegalStateException("Shift missing register: " + sh);
+        }
+
 
         if (!dst.equals(src))
             b.append("\tmovl ").append(src).append(", ").append(dst).append("\n");
