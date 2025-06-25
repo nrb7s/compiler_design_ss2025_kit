@@ -396,8 +396,8 @@ public class SsaTranslation {
 
             data.setCurrentBlock(afterBlock);
             var phi = new edu.kit.kastel.vads.compiler.ir.node.Phi(afterBlock);
-            phi.appendOperand(thenRes);
-            phi.appendOperand(elseRes);
+            phi.addInput(thenBlock, thenRes);
+            phi.addInput(elseBlock, elseRes);
             afterBlock.addNode(phi);
 
             popSpan();
