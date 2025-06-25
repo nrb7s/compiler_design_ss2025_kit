@@ -60,7 +60,6 @@ public class AasmRegisterAllocator implements RegisterAllocator {
                 || node instanceof StartNode
                 || node instanceof Block
                 || node instanceof ReturnNode
-                || node instanceof Phi
                 || node instanceof PhiElimination.CopyNode);
     }
 }

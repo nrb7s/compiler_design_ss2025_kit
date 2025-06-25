@@ -27,6 +27,7 @@ public class CodeGenerator {
         builder.append(".section .note.GNU-stack,\"\",@progbits\n\t.text\n");
 
         for (IrGraph graph : program) {
+            PhiElimination.run(graph);
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
 
@@ -69,8 +70,7 @@ public class CodeGenerator {
                 || n instanceof StartNode
                 || n instanceof Block
                 || n instanceof ReturnNode
-                || n instanceof PhiElimination.CopyNode
-                || n instanceof Phi);
+                || n instanceof PhiElimination.CopyNode);
     }
 
     private void generateAssemblyForGraph(IrGraph graph, StringBuilder b,
@@ -198,7 +198,9 @@ public class CodeGenerator {
                         .append(", ").append(dest)
                         .append("\n");
             }
-            case Phi _ -> { return; }
+            case Phi phi -> {
+                throw new IllegalStateException("Unexpected Phi node " + phi);
+            }
             case Block _, ProjNode _, StartNode _ -> { return; }
         }
     }
@@ -210,8 +212,7 @@ public class CodeGenerator {
         Register r = registers.get(node);
         if (r == null) {
             // Nodes that do not require a register simply return null
-            if (node instanceof Phi
-                    || node instanceof ProjNode
+            if (node instanceof ProjNode
                     || node instanceof StartNode
                     || node instanceof Block
                     || node instanceof ReturnNode
@@ -228,8 +229,7 @@ public class CodeGenerator {
         } else {
             Integer off = slotOffset.get(node);
             if (off == null) {
-                if (node instanceof Phi
-                        || node instanceof ProjNode
+                if (node instanceof ProjNode
                         || node instanceof StartNode
                         || node instanceof Block
                         || node instanceof ReturnNode
