@@ -15,10 +15,10 @@ public final class PhiElimination {
         List<Block> rpo = reversePostOrder(g);
 
         for (Block b : rpo) {
-            List<Phi> phis = new ArrayList<>();
-            for (Node n : b.nodes()) if (n instanceof Phi p) phis.add(p);
-
-            for (Phi phi : phis) {
+            ListIterator<Node> it = b.nodes().listIterator();
+            while (it.hasNext()) {
+                Node n = it.next();
+                if (!(n instanceof Phi phi)) continue;
                 Node dst = phi;
                 int idx = 0;
                 for (Node predNode : b.predecessors()) {
@@ -30,7 +30,7 @@ public final class PhiElimination {
                     CopyNode cp = new CopyNode(pred, src, dst);
                     insertBeforeTerminator(pred, cp);
                 }
-                b.nodes().remove(phi);
+                it.remove();
             }
         }
     }
