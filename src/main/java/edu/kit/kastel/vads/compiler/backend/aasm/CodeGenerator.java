@@ -19,14 +19,18 @@ public class CodeGenerator {
     };
     private static final String TEMP_REG_1 = "%esi";
     private static final String TEMP_REG_2 = "%edi";
-    // Assign slot for every variable (declaration) only once
+    // Assign slot for spilled temps
     Map<Node, Integer> slotOffset = new HashMap<>();
+    // Assign slot for variables
+    Map<Name, Integer> varOffset = new HashMap<>();
 
     public String generateAssembly(List<IrGraph> program) {
         StringBuilder builder = new StringBuilder();
         builder.append(".section .note.GNU-stack,\"\",@progbits\n\t.text\n");
 
         for (IrGraph graph : program) {
+            slotOffset.clear();
+            varOffset.clear();
             PhiElimination.run(graph);
             AasmRegisterAllocator allocator = new AasmRegisterAllocator();
             Map<Node, Register> registers = allocator.allocateRegisters(graph);
@@ -36,6 +40,17 @@ public class CodeGenerator {
             for (Node n : registers.keySet()) {
                 if (needsSpill(n)) {
                     slotOffset.computeIfAbsent(n, __ -> nextSlot.getAndIncrement() * 4);
+                }
+            }
+
+            for (Block blk : graph.blocks()) {
+                for (Node n : blk.nodes()) {
+                    if (n instanceof LoadNode || n instanceof StoreNode) {
+                        Name var = graph.origin(n);
+                        if (var != null) {
+                            varOffset.computeIfAbsent(var, __ -> nextSlot.getAndIncrement() * 4);
+                        }
+                    }
                 }
             }
 
@@ -54,7 +69,7 @@ public class CodeGenerator {
             Block entry = graph.blocks().get(0);
             builder.append("\tjmp L").append(entry.getId()).append("\n");
 
-            generateAssemblyForGraph(graph, builder, registers, slotOffset);
+            generateAssemblyForGraph(graph, builder, registers, slotOffset, varOffset);
 
             // Epilogue
             builder.append("\tmovq %rbp, %rsp\n")
@@ -75,7 +90,8 @@ public class CodeGenerator {
 
     private void generateAssemblyForGraph(IrGraph graph, StringBuilder b,
                                           Map<Node, Register> regs,
-                                          Map<Node, Integer> slotOffset) {
+                                          Map<Node, Integer> slotOffset,
+                                          Map<Name, Integer> varOffset) {
         Set<Block> visited = new HashSet<>();
         Deque<Block> work = new ArrayDeque<>();
         work.add(graph.startBlock());
@@ -84,7 +100,7 @@ public class CodeGenerator {
             if (!visited.add(blk)) continue;
             b.append("L").append(blk.getId()).append(":\n");
             for (Node n : blk.nodes()) {
-                scanAsm(n, b, regs, slotOffset, graph);
+                scanAsm(n, b, regs, slotOffset, varOffset, graph);
             }
             List<Node> nodes = blk.nodes();
             if (!nodes.isEmpty()) {
@@ -105,6 +121,7 @@ public class CodeGenerator {
     private void scanAsm(Node node, StringBuilder builder,
                          Map<Node, Register> registers,
                          Map<Node, Integer> slotOffset,
+                         Map<Name, Integer> varOffset,
                          IrGraph graph) {
         switch (node) {
             case AddNode add -> binaryAsm(builder, registers, add, "addl", slotOffset, graph);
@@ -153,6 +170,21 @@ public class CodeGenerator {
                 builder.append("\tcmpl $0, ").append(condReg).append("\n")
                         .append("\tjne L").append(cj.trueTarget().getId()).append("\n")
                         .append("\tjmp L").append(cj.falseTarget().getId()).append("\n");
+            }
+            case LoadNode load -> {
+                String dst = regAllocate(load, registers, slotOffset, graph);
+                if (dst == null) {
+                    throw new IllegalStateException("Load missing register: " + load);
+                }
+                Name n = graph.origin(load);
+                int off = varOffset.get(n);
+                emitMov(builder, "-" + off + "(%rbp)", dst);
+            }
+            case StoreNode store -> {
+                String src = regAllocate(store.predecessor(StoreNode.VALUE), registers, slotOffset, graph);
+                Name n = graph.origin(store);
+                int off = varOffset.get(n);
+                emitMov(builder, src, "-" + off + "(%rbp)");
             }
             case PhiElimination.CopyNode copy -> {
                 String src = regAllocate(
@@ -208,6 +240,7 @@ public class CodeGenerator {
                     || node instanceof StartNode
                     || node instanceof Block
                     || node instanceof ReturnNode
+                    || node instanceof StoreNode
                     || node instanceof PhiElimination.CopyNode) {
                 return null;
             }
@@ -225,6 +258,7 @@ public class CodeGenerator {
                         || node instanceof StartNode
                         || node instanceof Block
                         || node instanceof ReturnNode
+                        || node instanceof StoreNode
                         || node instanceof PhiElimination.CopyNode) {
                     return null;
                 }

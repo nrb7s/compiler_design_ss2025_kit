@@ -185,6 +185,20 @@ public class GraphConstructor {
         return this.graph;
     }
 
+    public Node newLoad(Name variable) {
+        LoadNode node = new LoadNode(currentBlock());
+        currentBlock().addNode(node);
+        graph.setOrigin(node, variable);
+        return this.optimizer.transform(node);
+    }
+
+    public void newStore(Name variable, Node value) {
+        StoreNode node = new StoreNode(currentBlock(), value);
+        currentBlock().addNode(node);
+        graph.setOrigin(node, variable);
+    }
+
+
     void writeVariable(Name variable, Block block, Node value) {
         // System.out.println("WRITE " + variable.asString() + " in " + block.getId() + " -> " + value);
         if (this.graph.origin(value) == null) {this.graph.setOrigin(value, variable);}
@@ -356,34 +370,28 @@ public class GraphConstructor {
             }
             // System.out.println("declare " + varName.asString() + " -> " + initVal);
             writeVariable(varName, currentBlock(), initVal);
+            newStore(varName, initVal);
         } else if (stmt instanceof AssignmentTree assign) {
             Node value = buildExpr(assign.expression());
             Name var = extractName(assign.lValue());
+            Node newVal;
             // +=，-=，*=，/=，%=
             switch (assign.operator().type()) {
-                case ASSIGN -> writeVariable(var, currentBlock(), value);
-                case ASSIGN_PLUS -> writeVariable(var, currentBlock(),
-                        newAdd(readVariable(var, currentBlock()), value));
-                case ASSIGN_MINUS -> writeVariable(var, currentBlock(),
-                        newSub(readVariable(var, currentBlock()), value));
-                case ASSIGN_MUL -> writeVariable(var, currentBlock(),
-                        newMul(readVariable(var, currentBlock()), value));
-                case ASSIGN_DIV -> writeVariable(var, currentBlock(),
-                        newDiv(readVariable(var, currentBlock()), value));
-                case ASSIGN_MOD -> writeVariable(var, currentBlock(),
-                        newMod(readVariable(var, currentBlock()), value));
-                case ASSIGN_LSHIFT -> writeVariable(var, currentBlock(),
-                        newShl(readVariable(var, currentBlock()), value));
-                case ASSIGN_RSHIFT -> writeVariable(var, currentBlock(),
-                        newShr(readVariable(var, currentBlock()), value));
-                case ASSIGN_AND -> writeVariable(var, currentBlock(),
-                        newAnd(readVariable(var, currentBlock()), value));
-                case ASSIGN_OR -> writeVariable(var, currentBlock(),
-                        newOr(readVariable(var, currentBlock()), value));
-                case ASSIGN_XOR -> writeVariable(var, currentBlock(),
-                        newXor(readVariable(var, currentBlock()), value));
+                case ASSIGN -> newVal = value;
+                case ASSIGN_PLUS -> newVal = newAdd(readVariable(var, currentBlock()), value);
+                case ASSIGN_MINUS -> newVal = newSub(readVariable(var, currentBlock()), value);
+                case ASSIGN_MUL -> newVal = newMul(readVariable(var, currentBlock()), value);
+                case ASSIGN_DIV -> newVal = newDiv(readVariable(var, currentBlock()), value);
+                case ASSIGN_MOD -> newVal = newMod(readVariable(var, currentBlock()), value);
+                case ASSIGN_LSHIFT -> newVal = newShl(readVariable(var, currentBlock()), value);
+                case ASSIGN_RSHIFT -> newVal = newShr(readVariable(var, currentBlock()), value);
+                case ASSIGN_AND -> newVal = newAnd(readVariable(var, currentBlock()), value);
+                case ASSIGN_OR -> newVal = newOr(readVariable(var, currentBlock()), value);
+                case ASSIGN_XOR -> newVal = newXor(readVariable(var, currentBlock()), value);
                 default -> throw new UnsupportedOperationException("Unsupported assignment operator");
             }
+            writeVariable(var, currentBlock(), newVal);
+            newStore(var, newVal);
         } else if (stmt instanceof IfTree ifTree) {
             buildIf(ifTree);
         } else if (stmt instanceof WhileLoopTree whileTree) {
@@ -581,8 +589,8 @@ public class GraphConstructor {
                 return newConstInt(value);
             }
             case IdentExpressionTree ident -> {
-                Name name = ident.name().name(); // the name of NameTree
-                return readVariable(name, currentBlock());
+                Name name = ident.name().name();
+                return newLoad(name);
             }
             case NegateTree neg -> {
                 Node operand = buildExpr(neg.expression());

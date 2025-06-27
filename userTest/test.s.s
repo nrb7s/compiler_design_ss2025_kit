@@ -4,55 +4,82 @@
 main:
 	push %rbp
 	mov %rsp, %rbp
-	subq $48, %rsp
+	subq $76, %rsp
 	jmp L0
 L0:
 	movl $0, %ebx
-	movl $781248, %ecx
+	movl %ebx, -72(%rbp)
+	movl $1, %ecx
+	movl $1, %ecx
+	movl %ecx, -72(%rbp)
+	movl $0, %ebx
+	movl %ebx, -76(%rbp)
 	movl $0, %ebx
 	movl $0, %ebx
+	movl %ebx, -76(%rbp)
+	movl -72(%rbp), %esi
+	movl %esi, -64(%rbp)
+	cmpl $0, -64(%rbp)
+	jne L4
+	jmp L5
 	movl $0, %ebx
-	movl $0, %ebx
-	movl $32, -8(%rbp)
-	movl $1, -44(%rbp)
-	movl $1, -44(%rbp)
-	movl $1, -44(%rbp)
-	movl -20(%rbp), %esi
-	movl %esi, -32(%rbp)
-	jmp L2
-L2:
-	cmpl -8(%rbp), %ebx
-	setl %al
-	movzbl %al, %esi
-	movl %esi, -16(%rbp)
-	cmpl $0, -16(%rbp)
-	jne L3
+	movl $1, %ecx
+	movl $1, %ecx
+	movl $2, -32(%rbp)
+	movl $3, -36(%rbp)
 	jmp L4
-L3:
-	movl -32(%rbp), %esi
-	movl %esi, -24(%rbp)
-	movl -44(%rbp), %esi
-	andl %esi, -24(%rbp)
-	movl -32(%rbp), %esi
-	movl %esi, -28(%rbp)
-	movl -24(%rbp), %esi
-	addl %esi, -28(%rbp)
-	movl -32(%rbp), %esi
-	movl %esi, -4(%rbp)
-	movl -44(%rbp), %ecx
-	andl $0x1F, %ecx
-	sarl %cl, -4(%rbp)
-	movl -32(%rbp), %esi
-	movl %esi, -12(%rbp)
-	movl -44(%rbp), %esi
-	addl %esi, -12(%rbp)
-	jmp L2
 L4:
-	movl %ebx, %eax
+	movl -76(%rbp), %esi
+	movl %esi, -16(%rbp)
+	movl -16(%rbp), %ebx
+	jmp L6
+L5:
+	movl $0, %ebx
+	jmp L6
+L6:
+	cmpl $0, %ebx
+	jne L2
+	jmp L3
+L2:
+	movl %ecx, %eax
 	movq %rbp, %rsp
 	pop %rbp
 	ret
+L3:
+	movl -72(%rbp), %esi
+	movl %esi, -12(%rbp)
+	cmpl $0, -12(%rbp)
+	sete %al
+	movzbl %al, %esi
+	movl %esi, -20(%rbp)
+	cmpl $0, -20(%rbp)
+	jne L9
+	jmp L10
 L1:
+L9:
+	movl $1, %ecx
+	movl %ecx, -56(%rbp)
+	jmp L11
+L10:
+	movl -76(%rbp), %esi
+	movl %esi, -48(%rbp)
+	movl -48(%rbp), %esi
+	movl %esi, -56(%rbp)
+	jmp L11
+L11:
+	cmpl $0, -56(%rbp)
+	jne L7
+	jmp L8
+L7:
+	movl -32(%rbp), %eax
+	movq %rbp, %rsp
+	pop %rbp
+	ret
+L8:
+	movl -36(%rbp), %eax
+	movq %rbp, %rsp
+	pop %rbp
+	ret
 	movq %rbp, %rsp
 	pop %rbp
 	ret

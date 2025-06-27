@@ -1,9 +1,7 @@
 int main() {
-    int input = 781248;
-    int sum = 0;
-    for (int i = 0; i < 32; i += 1) {
-        sum += input & 1;
-        input >>= 1;
-    }
-    return sum;
+bool a = true;
+bool b = false;
+if (a && b) {return 1;}
+if (!a || b) { return 2;}
+return 3;
 }
