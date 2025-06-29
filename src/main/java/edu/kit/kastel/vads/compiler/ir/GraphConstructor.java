@@ -186,16 +186,19 @@ public class GraphConstructor {
     }
 
     public Node newLoad(Name variable) {
-        LoadNode node = new LoadNode(currentBlock());
+        LoadNode node = new LoadNode(currentBlock(), readCurrentSideEffect());
         currentBlock().addNode(node);
         graph.setOrigin(node, variable);
-        return this.optimizer.transform(node);
+        Node res = this.optimizer.transform(node);
+        writeCurrentSideEffect(res);
+        return res;
     }
 
     public void newStore(Name variable, Node value) {
-        StoreNode node = new StoreNode(currentBlock(), value);
+        StoreNode node = new StoreNode(currentBlock(), readCurrentSideEffect(), value);
         currentBlock().addNode(node);
         graph.setOrigin(node, variable);
+        writeCurrentSideEffect(node);
     }
 
 
