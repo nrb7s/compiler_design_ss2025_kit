@@ -75,7 +75,8 @@ public class GraphConstructor {
         // always move const into start block, this allows better deduplication
         // and resultingly in better value numbering
         ConstIntNode c = new ConstIntNode(this.graph.startBlock(), value);
-        this.graph.startBlock().addNode(c);
+        // this.graph.startBlock().addNode(c);
+        this.graph.startBlock().nodes().add(0, c);
         return this.optimizer.transform(c);
     }
 
