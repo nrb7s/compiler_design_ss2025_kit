@@ -448,5 +448,11 @@ public class SsaTranslation {
             popSpan();
             return Optional.of(n);
         }
+
+        @Override
+        public Optional<Node> visit(ParameterTree parameterTree, SsaTranslation data) {
+            // Parameters have no direct IR representation in this phase
+            return NOT_AN_EXPRESSION;
+        }
     }
 }

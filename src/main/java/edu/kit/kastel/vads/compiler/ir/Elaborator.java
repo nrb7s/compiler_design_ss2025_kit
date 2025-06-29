@@ -15,6 +15,7 @@ public final class Elaborator {
         return new FunctionTree(
                 function.returnType(),
                 function.name(),
+                function.parameters(),
                 toBlock(simplifiedBody)
         );
     }

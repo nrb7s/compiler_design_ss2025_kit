@@ -50,4 +50,7 @@ public interface Visitor<T, R> {
     R visit(ExpressionStatementTree expressionStatementTree, T data);
 
     R visit(BooleanLiteralTree booleanLiteralTree, T data);
+
+    // L3
+    R visit(ParameterTree parameterTree, T data);
 }

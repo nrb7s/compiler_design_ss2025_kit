@@ -52,32 +52,61 @@ public class Parser {
 
     public ProgramTree parseProgram() {
         enterScope();
-        ProgramTree programTree = new ProgramTree(List.of(parseFunction()));
-        leaveScope();
-        if (this.tokenSource.hasMore()) {
-            throw new ParseException("expected end of input but got " + this.tokenSource.peek());
+        List<FunctionTree> functions = new ArrayList<>();
+        while (this.tokenSource.hasMore()) {
+            functions.add(parseFunction());
         }
-        return programTree;
+        leaveScope();
+        return new ProgramTree(functions);
     }
 
     private FunctionTree parseFunction() {
-        Keyword returnType = this.tokenSource.expectKeyword(KeywordType.INT);
+        Keyword kw = tokenSource.peek().isKeyword(KeywordType.INT)
+                ? tokenSource.expectKeyword(KeywordType.INT)
+                : tokenSource.expectKeyword(KeywordType.BOOL);
+        BasicType retType = kw.type() == KeywordType.INT ? BasicType.INT : BasicType.BOOL;
         Identifier identifier = this.tokenSource.expectIdentifier();
-        if (!identifier.value().equals("main")) {
-            throw new ParseException("expected main function but got " + identifier);
-        }
         this.tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
-        this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
 
         enterScope();
         Name funcName = declareName(identifier);
+        List<ParameterTree> params = parseParameterList();
+        this.tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+
         BlockTree body = parseBlock();
         leaveScope();
         return new FunctionTree(
-            new TypeTree(BasicType.INT, returnType.span()),
-            new NameTree(funcName, identifier.span()),
-            body
+                new TypeTree(retType, kw.span()),
+                new NameTree(funcName, identifier.span()),
+                params,
+                body
         );
+    }
+
+    private List<ParameterTree> parseParameterList() {
+        List<ParameterTree> params = new ArrayList<>();
+        if (this.tokenSource.peek().isSeparator(SeparatorType.PAREN_CLOSE)) {
+            return params;
+        }
+        while (true) {
+            Keyword kw = tokenSource.peek().isKeyword(KeywordType.INT)
+                    ? tokenSource.expectKeyword(KeywordType.INT)
+                    : tokenSource.expectKeyword(KeywordType.BOOL);
+            BasicType type = kw.type() == KeywordType.INT ? BasicType.INT : BasicType.BOOL;
+            Identifier id = tokenSource.expectIdentifier();
+            Map<String, Name> scope = scopes.peek();
+            if (scope.containsKey(id.value())) {
+                throw new ParseException("duplicate parameter " + id.value());
+            }
+            Name pname = declareName(id);
+            params.add(new ParameterTree(new TypeTree(type, kw.span()), new NameTree(pname, id.span())));
+            if (this.tokenSource.peek().isSeparator(SeparatorType.COMMA)) {
+                this.tokenSource.expectSeparator(SeparatorType.COMMA);
+            } else {
+                break;
+            }
+        }
+        return params;
     }
 
     private BlockTree parseBlock() {

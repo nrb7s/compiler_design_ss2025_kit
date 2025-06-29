@@ -55,6 +55,9 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
     public R visit(FunctionTree functionTree, T data) {
         R r = functionTree.returnType().accept(this, data);
         r = functionTree.name().accept(this, accumulate(data, r));
+        for (ParameterTree p : functionTree.parameters()) {
+            r = p.accept(this, accumulate(data, r));
+        }
         r = functionTree.body().accept(this, accumulate(data, r));
         r = this.visitor.visit(functionTree, accumulate(data, r));
         return r;
@@ -198,5 +201,13 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
     @Override
     public R visit(BooleanLiteralTree booleanLiteralTree, T data) {
         return visitor.visit(booleanLiteralTree, data);
+    }
+
+    // L3
+    @Override
+    public R visit(ParameterTree parameterTree, T data) {
+        R r = parameterTree.type().accept(this, data);
+        r = parameterTree.name().accept(this, accumulate(data, r));
+        return this.visitor.visit(parameterTree, accumulate(data, r));
     }
 }

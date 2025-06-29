@@ -38,11 +38,16 @@ public class Printer {
                 this.indentDepth--;
                 print("}");
             }
-            case FunctionTree(var returnType, var name, var body) -> {
+            case FunctionTree(var returnType, var name, var params, var body) -> {
                 printTree(returnType);
                 space();
                 printTree(name);
-                print("()");
+                print("(");
+                for (int i = 0; i < params.size(); i++) {
+                    if (i > 0) print(", ");
+                    printTree(params.get(i));
+                }
+                print(")");
                 space();
                 printTree(body);
             }
@@ -88,6 +93,11 @@ public class Printer {
                     printTree(initializer);
                 }
                 semicolon();
+            }
+            case ParameterTree(var t, var n) -> {
+                printTree(t);
+                space();
+                printTree(n);
             }
             case ReturnTree(var expr, _) -> {
                 print("return ");
