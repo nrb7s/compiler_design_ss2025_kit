@@ -96,7 +96,12 @@ public final class Elaborator {
         );
         // use a dummy span to mark this block as synthetic so that semantic
         // analysis does not introduce a new scope
-        return new BlockTree(List.of(noInit, initAssign), Span.DUMMY);
+        // return new BlockTree(List.of(noInit, initAssign), Span.DUMMY);
+
+        // Use the original span of the declaration for the synthetic block so
+        // that semantic analysis treats it like a regular block. This prevents
+        // the declaration from being visited twice in the same scope.
+        return new BlockTree(List.of(noInit, initAssign), decl.span());
     }
 
     private static BlockTree elaborateBlock(BlockTree block) {
