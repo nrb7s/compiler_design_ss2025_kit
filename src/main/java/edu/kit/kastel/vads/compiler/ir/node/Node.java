@@ -11,7 +11,7 @@ import java.util.List;
 /// The base class for all nodes.
 public sealed abstract class Node permits BinaryOperationNode, Block, ConstIntNode,
         Phi, ProjNode, ReturnNode, StartNode, CondJumpNode, BitwiseNotNode, LogicalNotNode,
-        PhiElimination.CopyNode, StoreNode, LoadNode {
+        PhiElimination.CopyNode, StoreNode, LoadNode, CallNode {
     private final IrGraph graph;
     private final Block block;
     private final List<Node> predecessors = new ArrayList<>();

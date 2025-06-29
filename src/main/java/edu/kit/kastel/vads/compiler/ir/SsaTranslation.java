@@ -10,6 +10,7 @@ import edu.kit.kastel.vads.compiler.parser.visitor.Visitor;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BinaryOperator;
 
@@ -459,8 +460,14 @@ public class SsaTranslation {
 
         @Override
         public Optional<Node> visit(CallExpressionTree callExpr, SsaTranslation data) {
-            // TODO: proper IR generation for calls
-            throw new UnsupportedOperationException("Call expressions not supported yet");
+            pushSpan(callExpr);
+            List<Node> args = new java.util.ArrayList<>();
+            for (ExpressionTree arg : callExpr.arguments()) {
+                args.add(arg.accept(this, data).orElseThrow());
+            }
+            Node call = data.constructor.newCall(callExpr.callee().name(), args);
+            popSpan();
+            return Optional.of(call);
         }
     }
 }

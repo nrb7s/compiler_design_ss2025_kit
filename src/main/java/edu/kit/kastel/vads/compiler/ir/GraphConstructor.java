@@ -202,6 +202,12 @@ public class GraphConstructor {
         writeCurrentSideEffect(node);
     }
 
+    public Node newCall(Name callee, List<Node> arguments) {
+        CallNode node = new CallNode(currentBlock(), callee, readCurrentSideEffect(), arguments);
+        currentBlock().addNode(node);
+        writeCurrentSideEffect(node);
+        return optimizer.transform(node);
+    }
 
     void writeVariable(Name variable, Block block, Node value) {
         // System.out.println("WRITE " + variable.asString() + " in " + block.getId() + " -> " + value);
@@ -613,6 +619,13 @@ public class GraphConstructor {
             case BitwiseNotTree bit -> {
                 Node op = buildExpr(bit.operand());
                 return newBitwiseNot(op);
+            }
+            case CallExpressionTree call -> {
+                List<Node> args = new ArrayList<>();
+                for (ExpressionTree a : call.arguments()) {
+                    args.add(buildExpr(a));
+                }
+                return newCall(call.callee().name(), args);
             }
             case BinaryOperationTree bin -> {
                 Node left = buildExpr(bin.lhs());

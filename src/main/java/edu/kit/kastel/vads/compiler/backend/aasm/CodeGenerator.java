@@ -186,6 +186,20 @@ public class CodeGenerator {
                 int off = varOffset.get(n);
                 emitMov(builder, src, "-" + off + "(%rbp)");
             }
+            case CallNode call -> {
+                for (int i = call.argumentCount() - 1; i >= 0; i--) {
+                    String arg = regAllocate(call.argument(i), registers, slotOffset, graph);
+                    builder.append("\tpush ").append(arg).append("\n");
+                }
+                builder.append("\tcall ").append(call.callee().asString()).append("\n");
+                if (call.argumentCount() > 0) {
+                    builder.append("\taddq $").append(call.argumentCount() * 4).append(", %rsp\n");
+                }
+                String dest = regAllocate(call, registers, slotOffset, graph);
+                if (dest != null) {
+                    builder.append("\tmovl %eax, ").append(dest).append("\n");
+                }
+            }
             case PhiElimination.CopyNode copy -> {
                 String src = regAllocate(
                         predecessorSkipProj(copy, PhiElimination.CopyNode.SRC),
