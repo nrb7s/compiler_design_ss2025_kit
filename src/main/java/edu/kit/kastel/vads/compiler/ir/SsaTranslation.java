@@ -449,10 +449,18 @@ public class SsaTranslation {
             return Optional.of(n);
         }
 
+        // L3
+
         @Override
         public Optional<Node> visit(ParameterTree parameterTree, SsaTranslation data) {
             // Parameters have no direct IR representation in this phase
             return NOT_AN_EXPRESSION;
+        }
+
+        @Override
+        public Optional<Node> visit(CallExpressionTree callExpr, SsaTranslation data) {
+            // TODO: proper IR generation for calls
+            throw new UnsupportedOperationException("Call expressions not supported yet");
         }
     }
 }

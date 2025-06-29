@@ -210,4 +210,16 @@ public class RecursivePostorderVisitor<T, R> implements Visitor<T, R> {
         r = parameterTree.name().accept(this, accumulate(data, r));
         return this.visitor.visit(parameterTree, accumulate(data, r));
     }
+
+    @Override
+    public R visit(CallExpressionTree callExpressionTree, T data) {
+        R r = callExpressionTree.callee().accept(this, data);
+        T d = accumulate(data, r);
+        for (ExpressionTree arg : callExpressionTree.arguments()) {
+            r = arg.accept(this, d);
+            d = accumulate(d, r);
+        }
+        r = this.visitor.visit(callExpressionTree, d);
+        return r;
+    }
 }

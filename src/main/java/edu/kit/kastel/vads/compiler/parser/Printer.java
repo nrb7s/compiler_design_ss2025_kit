@@ -135,6 +135,15 @@ public class Printer {
             case BitwiseNotTree(var operand) -> {
                 print("~("); printTree(operand); print(")");
             }
+            case CallExpressionTree(var callee, var args) -> {
+                printTree(callee);
+                print("(");
+                for (int i = 0; i < args.size(); i++) {
+                    if (i > 0) print(", ");
+                    printTree(args.get(i));
+                }
+                print(")");
+            }
             default -> throw new IllegalArgumentException("Unsupported AST node: " + tree.getClass());
         }
     }

@@ -214,6 +214,15 @@ class VariableStatusAnalysis implements NoOpVisitor<Namespace<VariableStatusAnal
     }
 
     @Override
+    public Unit visit(CallExpressionTree callExpressionTree, Namespace<VariableStatus> data) {
+        callExpressionTree.callee().accept(this, data);
+        for (ExpressionTree arg : callExpressionTree.arguments()) {
+            arg.accept(this, data);
+        }
+        return NoOpVisitor.super.visit(callExpressionTree, data);
+    }
+
+    @Override
     public Unit visit(ExpressionStatementTree expressionStatementTree, Namespace<VariableStatus> data) {
         expressionStatementTree.expr().accept(this, data);
         return NoOpVisitor.super.visit(expressionStatementTree, data);

@@ -53,4 +53,6 @@ public interface Visitor<T, R> {
 
     // L3
     R visit(ParameterTree parameterTree, T data);
+
+    R visit(CallExpressionTree callExpressionTree, T data);
 }

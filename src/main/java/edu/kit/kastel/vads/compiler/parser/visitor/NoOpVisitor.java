@@ -122,4 +122,7 @@ public interface NoOpVisitor<T> extends Visitor<T, Unit> {
     // L3
     @Override
     default Unit visit(ParameterTree parameterTree, T data) { return Unit.INSTANCE; }
+
+    @Override
+    default Unit visit(CallExpressionTree callExpressionTree, T data) { return Unit.INSTANCE; }
 }

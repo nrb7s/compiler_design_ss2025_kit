@@ -174,6 +174,12 @@ public class TypeCheckAnalysis implements NoOpVisitor<Namespace<BasicType>> {
                 }
                 yield BasicType.INT;
             }
+            case CallExpressionTree call -> {
+                for (ExpressionTree arg : call.arguments()) {
+                    expressionType(arg, data);
+                }
+                yield BasicType.INT;
+            }
             case ConditionalTree cond -> {
                 BasicType c = expressionType(cond.condition(), data);
                 if (c != BasicType.BOOL) {

@@ -492,7 +492,24 @@ public class Parser {
             }
             case Identifier ident -> {
                 this.tokenSource.consume();
-                yield new IdentExpressionTree(lookupName(ident));
+                NameTree name = lookupName(ident);
+                if (tokenSource.peek().isSeparator(SeparatorType.PAREN_OPEN)) {
+                    tokenSource.expectSeparator(SeparatorType.PAREN_OPEN);
+                    List<ExpressionTree> args = new ArrayList<>();
+                    if (!tokenSource.peek().isSeparator(SeparatorType.PAREN_CLOSE)) {
+                        while (true) {
+                            args.add(parseExpression());
+                            if (tokenSource.peek().isSeparator(SeparatorType.COMMA)) {
+                                tokenSource.expectSeparator(SeparatorType.COMMA);
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    tokenSource.expectSeparator(SeparatorType.PAREN_CLOSE);
+                    yield new CallExpressionTree(name, args);
+                }
+                yield new IdentExpressionTree(name);
             }
             case NumberLiteral(String value, int base, Span span) -> {
                 this.tokenSource.consume();
